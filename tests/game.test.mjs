@@ -18,7 +18,8 @@ const probe = join(here, '.probe.html');
 
 const HOOKS = `window.__dbg=()=>({plats:plats.length,parts:parts.length,state,score,
  cam:Math.round(cam),visH:Math.round(visH),ballY:Math.round(ball.y),grounded:ball.grounded,
- combo,zi,best:save.best,S:+S.toFixed(3)});
+ combo,zi,best:save.best,S:+S.toFixed(3),
+ shield:ball.shield,rocket:ball.rocket,air:ball.airShots,inv:ball.inv});
 window.__x=(s)=>eval(s);
 window.__perch=(y)=>{ ball.y=y; cam=y-visH*.62; camBest=cam; nextY=y+300;
   plats.length=0; recent.length=0; grow();
@@ -114,16 +115,28 @@ ok('zorluk hiçbir yükseklikte düzleşmiyor', curve[6] > curve[4] && curve[4] 
 const gen = await run(`(()=>{
   plats.length=0; recent.length=0; nextY=-165; srand(12345);
   for(let i=0;i<4000;i++){ row(nextY); nextY-=140; }
-  const P=plats.filter(p=>p.kind==='plat'), S=plats.filter(p=>p.kind==='spike');
-  let overlap=0;
+  const P=plats.filter(p=>p.kind==='plat'), S=plats.filter(p=>p.kind==='spike'),
+        O=plats.filter(p=>p.kind==='orb');
+  let overlap=0, orbClash=0;
   for(const s of S) for(const p of P){
     if(Math.abs(p.y-s.y)>34) continue;
     if(!(s.x+s.w<p.x || p.x+p.w<s.x)) overlap++;
   }
-  return {rows:P.length, spikes:S.length, overlap};
+  for(const o of O) for(const q of P.concat(S)){
+    if(Math.abs(q.y-o.y)>40) continue;
+    if(!(o.x+16 < q.x-4 || o.x-16 > q.x+q.w+4)) orbClash++;
+  }
+  const types={}; P.forEach(p=>types[p.type]=(types[p.type]||0)+1);
+  const outside = O.filter(o=>o.x<PL+16||o.x>PR-16).length;
+  return {rows:P.length, spikes:S.length, overlap, orbs:O.length, orbClash, types, outside};
 })()`);
 ok('hiçbir diken platformla çakışmıyor', gen.overlap === 0,
    `${gen.rows} satır / ${gen.spikes} diken / çakışma=${gen.overlap}`);
+ok('yalnızca üç zemin tipi üretiliyor', Object.keys(gen.types).length === 3,
+   JSON.stringify(gen.types));
+ok('güçlendirme küreleri üretiliyor', gen.orbs > 150, `${gen.orbs} küre`);
+ok('küreler platform veya dikene gömülmüyor', gen.orbClash === 0, `çakışma=${gen.orbClash}`);
+ok('küreler duvarların içinde kalmıyor', gen.outside === 0, `dışarıda=${gen.outside}`);
 
 const det = await run(`(()=>{
   const gen=()=>{ plats.length=0; recent.length=0; nextY=-165; srand(999);
@@ -200,6 +213,69 @@ const buf = await run(`(()=>{
   land(p); return {started:aim!==null, cleared:!buffered};
 })()`);
 ok('havada basılı tutulan parmak inişte nişana dönüşüyor', buf.started && buf.cleared);
+
+group('güçlendirmeler');
+for (const [t, check] of [['shield', 'shield'], ['rocket', 'rocket'], ['double', 'air']]) {
+  await run('startRun()');
+  await pg.waitForTimeout(120);
+  const got = await run(`(()=>{
+    const o={kind:'orb',type:'${t}',x:ball.x,y:ball.y-10,w:0,h:0,ph:0};
+    plats.push(o); grab(o);
+    return {taken:o.taken, shield:ball.shield, rocket:ball.rocket, air:ball.airShots};
+  })()`);
+  ok(`${t} toplanıyor`, got.taken && (check === 'air' ? got.air === 1 : got[check]),
+     JSON.stringify(got));
+}
+ok('HUD rozeti çiziliyor', (await pg.evaluate(() => document.querySelectorAll('#power .pw').length)) > 0);
+
+const flight = await run(`(()=>{
+  startRun();
+  const o={kind:'orb',type:'rocket',x:ball.x,y:ball.y-160,w:0,h:0,ph:0};
+  plats.push(o);
+  ball.grounded=false; ball.on=null; ball.vx=0; ball.vy=-14;
+  for(let i=0;i<26 && !o.taken;i++) step();
+  return {taken:!!o.taken, rocket:ball.rocket};
+})()`);
+ok('uçuş sırasında küre toplanıyor', flight.taken && flight.rocket, JSON.stringify(flight));
+
+await run('startRun()');
+await pg.waitForTimeout(120);
+let sh = await run(`(()=>{ ball.shield=true; die('spike');
+  return {state, shield:ball.shield, inv:ball.inv}; })()`);
+ok('kalkan diken ölümünü emiyor', sh.state === 'play' && !sh.shield && sh.inv > 0,
+   JSON.stringify(sh));
+sh = await run(`(()=>{ ball.shield=true; const c0=camBest; die('fall');
+  return {state, shield:ball.shield, moved:Math.round(camBest-c0)}; })()`);
+ok('kalkan düşmeyi emiyor, en yüksek nokta sıfırlanıyor',
+   sh.state === 'play' && !sh.shield && sh.moved > 0, JSON.stringify(sh));
+ok('kalkan yokken ölüm normal işliyor',
+   (await run(`(()=>{ ball.shield=false; ball.inv=0; die('spike'); return state; })()`)) === 'dying');
+
+const rk = await run(`(()=>{
+  startRun(); aim={sx:200,sy:400,x:200,y:600,lt:0};
+  const n=Math.hypot(launchVec().x, launchVec().y);
+  ball.rocket=true;
+  const r=Math.hypot(launchVec().x, launchVec().y);
+  release();
+  return {ratio:+(r/n).toFixed(2), spent:!ball.rocket};
+})()`);
+ok('roket gücü 1.7 katına çıkarıp tükeniyor', rk.ratio > 1.65 && rk.ratio < 1.75 && rk.spent,
+   `×${rk.ratio}`);
+
+const air = await run(`(()=>{
+  startRun();
+  ball.grounded=false; ball.on=null; ball.airShots=1; ball.vy=9; aimId=null; aim=null;
+  cvs.dispatchEvent(new PointerEvent('pointerdown',{pointerId:9,clientX:200,clientY:400,bubbles:true}));
+  const aimed=aim!==null; if(aim){ aim.x=200; aim.y=540; }
+  release({pointerId:9});
+  return {aimed, air:ball.airShots, vy:Math.round(ball.vy)};
+})()`);
+ok('çift atış havada nişan açıyor', air.aimed, JSON.stringify(air));
+ok('çift atış hakkı tükeniyor ve yön değişiyor', air.air === 0 && air.vy < 0, JSON.stringify(air));
+ok('hak yokken havada nişan açılmıyor', await run(`(()=>{
+  ball.grounded=false; ball.on=null; ball.airShots=0; aimId=null; aim=null;
+  cvs.dispatchEvent(new PointerEvent('pointerdown',{pointerId:11,clientX:200,clientY:400,bubbles:true}));
+  const a=aim; release({pointerId:11}); return a===null; })()`));
 
 group('ölüm ve kayıt');
 await run('startRun()');

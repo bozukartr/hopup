@@ -56,7 +56,12 @@
   .key{display:flex;align-items:center;gap:12px;font-size:14.5px}
   .chip{width:34px;height:11px;border-radius:6px;flex:none;background:var(--ink)}
   .chip.b{background:var(--mint)} .chip.s{background:var(--amber)}
-  .chip.k{background:var(--ice)} .chip.c{background:var(--violet)}
+  .chip.c{background:var(--violet)}
+  .orb{width:22px;height:22px;border-radius:50%;flex:none;margin-left:6px;margin-right:6px;
+    background:var(--ink);box-shadow:0 0 0 3px rgba(var(--ink-rgb),.14)}
+  .orb.k{background:var(--ice);box-shadow:0 0 0 3px rgba(105,191,255,.28)}
+  .orb.s{background:var(--amber);box-shadow:0 0 0 3px rgba(242,183,5,.28)}
+  .orb.c{background:var(--violet);box-shadow:0 0 0 3px rgba(169,123,224,.28)}
   .chip.d{background:var(--coral);height:12px;
     clip-path:polygon(0 100%,8% 0,16% 100%,24% 0,32% 100%,40% 0,48% 100%,56% 0,64% 100%,72% 0,80% 100%,88% 0,96% 100%)}
   .key i{font-style:normal;opacity:.5;font-size:13px;margin-left:auto}
@@ -102,9 +107,19 @@
   #combo{display:block;font-size:13px;font-weight:600;color:#0E9E76;margin-top:5px;
     opacity:0;transition:opacity .15s ease}
   #combo.on{opacity:1}
+  #power{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:9px}
+  .pw{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:700;
+    letter-spacing:.07em;padding:3px 8px 3px 4px;border-radius:100px;color:var(--ink);
+    white-space:nowrap;background:rgba(var(--paper-rgb),.88);
+    box-shadow:inset 0 0 0 1px rgba(var(--ink-rgb),.13);
+    animation:pwin .26s cubic-bezier(.2,1.5,.4,1) both}
+  .pw b{width:10px;height:10px;border-radius:50%;display:block;flex:none}
+  .pw.x{animation:pwout .3s ease both}
+  @keyframes pwin{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+  @keyframes pwout{to{opacity:0;transform:scale(1.5)}}
 
   /* ---------- bildirim ---------- */
-  #toast{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 92px);z-index:6;
+  #toast{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 142px);z-index:6;
     display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:none}
   .tst{background:rgba(var(--ink-rgb),.9);color:var(--paper);font-size:13.5px;font-weight:500;
     padding:8px 18px;border-radius:100px;animation:tin .3s ease both;white-space:nowrap;
@@ -138,6 +153,7 @@
     <span id="score" aria-live="off">0</span>
     <small>yükseklik</small>
     <span id="combo"></span>
+    <span id="power"></span>
   </div>
   <button class="hbtn" id="btnSound" aria-label="Sesi aç veya kapat"><span id="sndIcon">♪</span></button>
 </div>
@@ -153,10 +169,11 @@
   <div class="keys">
     <div class="key"><i class="chip"></i>Sade zemin<i>tutunur</i></div>
     <div class="key"><i class="chip b"></i>Zıplak<i>seni fırlatır</i></div>
-    <div class="key"><i class="chip s"></i>Yapışkan<i>anında durur</i></div>
-    <div class="key"><i class="chip k"></i>Kaygan<i>kaydırır</i></div>
     <div class="key"><i class="chip c"></i>Çürük<i>altından kaçar</i></div>
     <div class="key"><i class="chip d"></i>Diken<i>topu patlatır</i></div>
+    <div class="key"><i class="orb k"></i>Kalkan<i>bir ölümü emer</i></div>
+    <div class="key"><i class="orb s"></i>Roket<i>güçlü atış</i></div>
+    <div class="key"><i class="orb c"></i>Çift atış<i>havada fırlat</i></div>
   </div>
   <div class="row">
     <button id="btnStart">Oyna</button>
@@ -210,21 +227,27 @@ const STEP = 1000/60;
 const INK='#1B2230', PAPER='#E7EBF0', MINT='#2ED8A8', AMBER='#F2B705',
       ICE='#69BFFF', CORAL='#FF4D5E', VIOLET='#A97BE0', GREY='#96A0B0';
 
-const COLOR = {ground:INK, normal:INK, bouncy:MINT, sticky:AMBER, slippery:ICE, crumble:VIOLET};
-const FRIC  = {ground:.88, normal:.88, bouncy:.92, sticky:0, slippery:.996, crumble:.86};
-const TNAME = {normal:'Sade zemin', bouncy:'Zıplak zemin', sticky:'Yapışkan zemin',
-               slippery:'Kaygan zemin', crumble:'Çürük zemin'};
-const THINT = {bouncy:'seni yukarı fırlatır', sticky:'anında durdurur',
-               slippery:'altından kayar', crumble:'bastıktan sonra kırılır'};
+const COLOR = {ground:INK, normal:INK, bouncy:MINT, crumble:VIOLET};
+const FRIC  = {ground:.88, normal:.88, bouncy:.92, crumble:.86};
+const TNAME = {normal:'Sade zemin', bouncy:'Zıplak zemin', crumble:'Çürük zemin'};
+const THINT = {bouncy:'seni yukarı fırlatır', crumble:'bastıktan sonra kırılır'};
+
+/* güçlendirmeler */
+const PW = {
+  shield: {c:ICE,    n:'KALKAN',    s:'KALKAN', h:'bir ölümü emer'},
+  rocket: {c:AMBER,  n:'ROKET',     s:'ROKET',  h:'sonraki atış çok güçlü'},
+  double: {c:VIOLET, n:'ÇİFT ATIŞ', s:'ÇİFT',   h:'havada bir kez daha fırlat'},
+};
+const PWKEYS = ['shield','rocket','double'];
 
 /* bölgeler — yükseklik arttıkça dünya değişir */
 const ZONES = [
-  {n:'ZEMİN',    from:0,    paper:'#E7EBF0', ink:'#1B2230', wind:0,    types:['normal','bouncy']},
-  {n:'BUZ',      from:320,  paper:'#DCEAF3', ink:'#16303F', wind:0,    types:['normal','bouncy','slippery']},
-  {n:'REÇİNE',   from:780,  paper:'#F0E8DB', ink:'#33261A', wind:0,    types:['normal','bouncy','slippery','sticky']},
-  {n:'RÜZGÂR',   from:1400, paper:'#E3ECE7', ink:'#1C3028', wind:.055, types:['normal','bouncy','slippery','sticky']},
-  {n:'ÇÜRÜK KAT',from:2100, paper:'#EDE3EC', ink:'#2C1E30', wind:0,    types:['normal','bouncy','slippery','sticky','crumble']},
-  {n:'FIRTINA',  from:2900, paper:'#D8DBE6', ink:'#14161F', wind:.085, types:['normal','bouncy','slippery','sticky','crumble']},
+  {n:'ZEMİN',    from:0,    paper:'#E7EBF0', ink:'#1B2230', wind:0,    types:['normal','bouncy'],           motif:'dot'},
+  {n:'BUZ',      from:320,  paper:'#DCEAF3', ink:'#16303F', wind:0,    types:['normal','bouncy'],           motif:'shard'},
+  {n:'REÇİNE',   from:780,  paper:'#F0E8DB', ink:'#33261A', wind:0,    types:['normal','bouncy','crumble'], motif:'drip'},
+  {n:'RÜZGÂR',   from:1400, paper:'#E3ECE7', ink:'#1C3028', wind:.055, types:['normal','bouncy','crumble'], motif:'arc'},
+  {n:'ÇÜRÜK KAT',from:2100, paper:'#EDE3EC', ink:'#2C1E30', wind:0,    types:['normal','bouncy','crumble'], motif:'crack'},
+  {n:'FIRTINA',  from:2900, paper:'#D8DBE6', ink:'#14161F', wind:.085, types:['normal','bouncy','crumble'], motif:'bolt'},
 ];
 
 /* ================= yardımcılar ================= */
@@ -303,11 +326,13 @@ const Snd = (()=>{
     launch(t){ tone(300+t*120, .16, {type:'triangle', vol:.16, to:90}); hiss(.09,.06,900,1.2); },
     land(){ tone(150, .09, {type:'sine', vol:.13, to:95}); hiss(.05,.05,700,1.4); },
     bounce(p){ tone(320+p*220, .2, {type:'sine', vol:.2, to:760+p*260}); },
-    sticky(){ tone(110, .13, {type:'sawtooth', vol:.1, to:60}); },
-    slip(){ hiss(.18,.07,2400,2.4); },
     wall(){ tone(210, .05, {type:'square', vol:.05, to:150}); },
     crack(){ hiss(.14,.09,1500,2); tone(180,.1,{type:'square',vol:.07,to:80}); },
     near(){ tone(1250, .1, {type:'sine', vol:.1, to:1750}); },
+    grab(){ [660,880,1320].forEach((f,i)=>tone(f,.2,{type:'triangle',vol:.13,delay:i*.05})); },
+    rocket(){ tone(160,.42,{type:'sawtooth',vol:.18,to:900}); hiss(.34,.16,1500,.8); },
+    airshot(){ tone(520,.16,{type:'triangle',vol:.14,to:980}); },
+    shieldBreak(){ hiss(.3,.18,2600,1.6); tone(900,.26,{type:'sine',vol:.14,to:300}); },
     combo(n){ tone(430*Math.pow(1.09, Math.min(n,14)), .11, {type:'triangle', vol:.12}); },
     zone(){ [0,.09,.18].forEach((d,i)=>tone([392,523,659][i], .5, {type:'sine', vol:.11, delay:d})); },
     record(){ [523,659,784,1047].forEach((f,i)=>tone(f,.28,{type:'triangle',vol:.14,delay:i*.085})); },
@@ -394,8 +419,70 @@ function dust(x,y,n,c,spread){
   if(parts.length>320) parts.splice(0, parts.length-320);
 }
 function ring(x,y,c){ if(quality>.35) rings.push({x,y,r:8,life:1,c}); }
+function burst(x,y,c,n){
+  n = Math.round(n*quality); if(n<=0) return;
+  for(let i=0;i<n;i++){
+    const a = (i/n)*6.283 + rand()*.5, sp = rnd(1.8,6.2);
+    parts.push({x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - .6,
+      life:1, dec:rnd(.016,.034), s:rnd(2,5), c, g:.12});
+  }
+  if(parts.length>360) parts.splice(0, parts.length-360);
+}
+let flashC=null, flashA=0, sweep=0, vig=0;
+function flash(c, a){ if(reduceMotion) return; flashC=c; flashA=Math.max(flashA, a); }
 function floater(x,y,text,c){ floats.push({x,y,text,c,life:1}); if(floats.length>10) floats.shift(); }
-function addShake(v){ if(!reduceMotion) shake=Math.min(14, shake+v); }
+function addShake(v){ if(!reduceMotion) shake=Math.min(16, shake+v); }
+
+/* ================= güçlendirmeler ================= */
+function syncPower(){
+  if(!ball){ el('power').innerHTML=''; return; }
+  const on=[];
+  if(ball.shield) on.push('shield');
+  if(ball.rocket) on.push('rocket');
+  if(ball.airShots>0) on.push('double');
+  const want = on.map(k=>k+(k==='double'&&ball.airShots>1?ball.airShots:'')).join(',');
+  if(el('power').dataset.k === want) return;
+  el('power').dataset.k = want;
+  el('power').innerHTML = on.map(k=>{
+    const n = k==='double' && ball.airShots>1 ? PW[k].s+' ×'+ball.airShots : PW[k].s;
+    return '<span class="pw"><b style="background:'+PW[k].c+'"></b>'+n+'</span>';
+  }).join('');
+}
+
+function grab(o){
+  o.taken = true;
+  const c = PW[o.type].c;
+  if(o.type==='shield') ball.shield = true;
+  else if(o.type==='rocket') ball.rocket = true;
+  else ball.airShots = Math.min(3, ball.airShots + 1);
+
+  burst(o.x, o.y, c, 18);
+  ring(o.x, o.y, c); ring(o.x, o.y, c);
+  flash(c, .22);
+  floater(o.x, o.y-18, PW[o.type].n, c);
+  addShake(2.6); Snd.grab(); buzz(12);
+  syncPower();
+  if(!save.seen['pw_'+o.type]){
+    save.seen['pw_'+o.type] = true; persist();
+    toast(PW[o.type].n + ' — ' + PW[o.type].h, false, 2600);
+  }
+}
+
+/* kalkan bir ölümü emer; kurtarmanın bedeli, ulaştığın en yüksek noktayı kaybetmen */
+function useShield(cause){
+  ball.shield = false; ball.inv = 70;
+  burst(ball.x, ball.y, ICE, 26);
+  ring(ball.x, ball.y, ICE); ring(ball.x, ball.y, ICE);
+  flash(ICE, .38); addShake(9); Snd.shieldBreak(); buzz([18,40,18]);
+  floater(ball.x, ball.y-30, 'KALKAN KIRILDI', ICE);
+  if(cause==='fall'){
+    camBest = ball.y - visH*.5; cam = camBest;
+    ball.vy = -17;
+  }else{
+    ball.vy = -15; ball.vx *= .5;
+  }
+  syncPower();
+}
 
 /* ================= üretim ================= */
 const recent=[];   // son yerleştirilen platformlar (diken doğrulaması için)
@@ -403,11 +490,9 @@ const recent=[];   // son yerleştirilen platformlar (diken doğrulaması için)
 function typeFor(z, d){
   const list = ZONES[z].types;
   const w = list.map(t=>{
-    if(t==='normal')   return 40 - d*14;
-    if(t==='bouncy')   return 24;
-    if(t==='slippery') return 10 + d*10;
-    if(t==='sticky')   return 10 + d*11;
-    if(t==='crumble')  return 8 + d*14;
+    if(t==='normal')  return 50 - d*10;
+    if(t==='bouncy')  return 26 + d*4;
+    if(t==='crumble') return 6 + d*16;
     return 10;
   });
   let sum=0; for(const v of w) sum+=v;
@@ -452,6 +537,7 @@ function row(y){
     }
   }
   p.px=p.x;
+  clearOrbs(p.move==='h' ? p.bx-p.amp : p.x, p.move==='h' ? p.w+p.amp*2 : p.w, y);
   plats.push(p);
   recent.push(p); if(recent.length>6) recent.shift();
 
@@ -463,6 +549,7 @@ function row(y){
     for(let i=0;i<10;i++){
       const sx=rnd(PL+4, PR-4-sw), sy=y+rnd(-26,26);
       if(freeOfPlatforms(sx, sw, sy, 34)){
+        clearOrbs(sx, sw, sy);
         plats.push({kind:'spike', dir:'up', x:sx, y:sy, w:sw, h:11});
         break;
       }
@@ -473,8 +560,35 @@ function row(y){
     const hh=rnd(52,116), left=rand()<.5;
     const sx = left ? PL : PR-13, sy = y+rnd(-40,40);
     if(freeOfPlatforms(sx, 13, sy, 22)){
+      for(let yy=sy; yy<sy+hh; yy+=30) clearOrbs(sx, 13, yy);
       plats.push({kind:'spike', dir:left?'right':'left', x:sx, y:sy, w:13, h:hh});
     }
+  }
+
+  // güçlendirme küresi — boş havada, hafif bir sapma gerektirecek yerde
+  if(rand() < .085){
+    const rr2 = rand();
+    const type = rr2 < .22 ? 'shield' : rr2 < .61 ? 'rocket' : 'double';
+    for(let i=0;i<8;i++){
+      const ox = rnd(PL+26, PR-26), oy = y - rnd(46, 104);
+      let clear = true;
+      for(const q of plats){
+        if(Math.abs(q.y-oy) > 60) continue;
+        const qw = q.kind==='orb' ? 30 : q.w;
+        if(!(ox+30 < q.x - 8 || ox-30 > q.x + qw + 8)) { clear = false; break; }
+      }
+      if(clear){ plats.push({kind:'orb', type, x:ox, y:oy, w:0, h:0, ph:rand()*6.283}); break; }
+    }
+  }
+}
+
+/* bu satırda yerleştirilen bir şey daha önce konmuş bir küreyi yutuyorsa küreyi kaldır */
+function clearOrbs(x, w, y){
+  for(let i=plats.length-1;i>=0;i--){
+    const o=plats[i];
+    if(o.kind!=='orb') continue;
+    if(Math.abs(o.y-y) > 44) continue;
+    if(!(o.x+18 < x-6 || o.x-18 > x+w+6)) plats.splice(i,1);
   }
 }
 
@@ -509,7 +623,9 @@ function reset(){
   const floor={kind:'plat', type:'ground', x:PL, y:0, w:PR-PL, h:600, px:PL};
   plats.push(floor);
   ball={x:VW/2, y:-BR, px:VW/2, py:-BR, rx:VW/2, ry:-BR, vx:0, vy:0,
-        grounded:true, on:floor, trail:[]};
+        grounded:true, on:floor, trail:[],
+        shield:false, rocket:false, airShots:0, inv:0};
+  syncPower();
   landY=ball.y; lastPlat=floor;
   cam = 140 - visH; camBest = cam;
   nextY = -170;
@@ -556,21 +672,21 @@ function bumpCombo(p){
 
 function land(p){
   ball.y = p.y - BR;
+  p.press = Math.min(1, Math.abs(ball.vy)/16 + .25);
   if(p.type==='bouncy'){
     const b = Math.abs(ball.vy)*.94 + 2.4;
     if(b > 5.2){
       ball.vy = -b; ball.vx *= .98;
       ring(ball.x, p.y, MINT); dust(ball.x, p.y, 7, MINT, 2.6);
-      addShake(b*.28); Snd.bounce(clamp(b/26,0,1));
+      p.press = 1; addShake(b*.28); Snd.bounce(clamp(b/26,0,1));
+      if(b > 17) flash(MINT, .14);
       bumpCombo(p);
       return;
     }
   }
   ball.vy = 0; ball.grounded = true; ball.on = p;
   bumpCombo(p);
-  if(p.type==='sticky'){ ball.vx=0; dust(ball.x,p.y,5,AMBER,1.4); Snd.sticky(); }
-  else if(p.type==='slippery'){ dust(ball.x,p.y,4,ICE,2.2); Snd.slip(); }
-  else if(p.type==='crumble'){ ball.vx*=.6; dust(ball.x,p.y,5,VIOLET,2); Snd.land();
+  if(p.type==='crumble'){ ball.vx*=.6; dust(ball.x,p.y,5,VIOLET,2); Snd.land();
     if(p.fuse==null) p.fuse=28; }
   else { ball.vx*=.5; dust(ball.x,p.y,5,GREY,2); Snd.land(); }
   addShake(1.4);
@@ -626,7 +742,10 @@ function step(){
     if(p.move==='h') p.x = p.bx + Math.sin(tick*p.spd + p.ph)*p.amp;
     else if(p.move==='v') p.y = p.by + Math.sin(tick*p.spd + p.ph)*p.amp;
     if(p.fuse > 0){ p.fuse--; if(p.fuse===0) breakPlat(p); }
+    if(p.press > .01) p.press *= .8; else p.press = 0;
   }
+  if(flashA > 0){ flashA *= .84; if(flashA < .01) flashA = 0; }
+  if(sweep > 0){ sweep -= .022; if(sweep < 0) sweep = 0; }
 
   if(state==='play'){
     ball.rx = ball.x; ball.ry = ball.y;
@@ -663,9 +782,20 @@ function step(){
       }
     }
 
+    if(ball.inv > 0) ball.inv--;
+
+    // güçlendirme toplama
+    for(const o of plats){
+      if(o.kind!=='orb' || o.taken) continue;
+      if(Math.abs(o.y - ball.y) > 90) continue;
+      const dx=ball.x-o.x, dy=ball.y-o.y, rr2=(BR+15)*(BR+15);
+      if(dx*dx+dy*dy < rr2) grab(o);
+    }
+
     // dikenler + kıl payı
     for(const s of plats){
       if(s.kind!=='spike') continue;
+      if(ball.inv > 0) continue;
       if(s.y > ball.y+220 || s.y+s.h < ball.y-220) continue;
       if(overlapSpike(s)){ die('spike'); break; }
       if(!s.nm && !ball.grounded && nearSpike(s)){
@@ -694,6 +824,7 @@ function step(){
       if(z !== zi){
         ziPrev = zi; zi = z; zMix = 0;
         toast(ZONES[z].n, true, 2400); Snd.zone(); addShake(3);
+        sweep = 1; flash(MINT, .2);
       }
     }
     if(zMix < 1){ zMix = Math.min(1, zMix + .014); if(tick%2===0 || zMix===1) applyZone(); }
@@ -709,7 +840,7 @@ function step(){
   if(state==='play' && ball.y - BR > cam + visH + 20) die('fall');
 
   for(let i=parts.length-1;i>=0;i--){
-    const q=parts[i]; q.vy+=.28; q.x+=q.vx; q.y+=q.vy; q.vx*=.99; q.life-=q.dec;
+    const q=parts[i]; q.vy+=(q.g==null?.28:q.g); q.x+=q.vx; q.y+=q.vy; q.vx*=.98; q.life-=q.dec;
     if(q.life<=0 || q.y > cam+visH+160) parts.splice(i,1);
   }
   for(let i=rings.length-1;i>=0;i--){
@@ -723,6 +854,7 @@ function step(){
 /* ================= ölüm ================= */
 function die(cause){
   if(state!=='play') return;
+  if(ball.shield){ useShield(cause); return; }
   state = 'dying';
   deadCause = cause; deadAt = performance.now();
   addShake(12);
@@ -734,8 +866,8 @@ function die(cause){
     life:1, dec:rnd(.012,.03), s:rnd(2.5,6), c:i%3?CORAL:ink});
   ring(ball.x, ball.y, CORAL);
 
-  if(cause==='spike'){ Snd.pop(); if(!reduceMotion) slow=16; }
-  else Snd.fall();
+  if(cause==='spike'){ Snd.pop(); flash(CORAL,.42); if(!reduceMotion) slow=16; }
+  else { Snd.fall(); flash(CORAL,.26); }
   buzz(40);
 
   newRecord = score > save.best;
@@ -743,7 +875,10 @@ function die(cause){
   save.best = Math.max(save.best, score);
   save.bestCombo = Math.max(save.bestCombo, comboBest);
   persist();
-  if(newRecord) setTimeout(()=>Snd.record(), 260);
+  if(newRecord){
+    setTimeout(()=>Snd.record(), 260);
+    for(let i=0;i<3;i++) setTimeout(()=>{ if(ball) burst(ball.x, ball.y, MINT, 16); }, 300+i*140);
+  }
 
   clearTimeout(overTimer);
   overTimer = setTimeout(showOver, 780);
@@ -813,7 +948,8 @@ function launchVec(){
   const len = Math.hypot(dx,dy), mp = MAXPULL();
   if(len < 1) return {x:0,y:0,t:0};
   const t = Math.min(1, len/mp);
-  const power = (PULL_MIN + t*PULL_MAX) * (1 + Math.min(combo,10)*.018);
+  let power = (PULL_MIN + t*PULL_MAX) * (1 + Math.min(combo,10)*.018);
+  if(ball.rocket) power *= 1.7;
   return {x:dx/len*power, y:dy/len*power, t};
 }
 
@@ -833,7 +969,7 @@ cvs.addEventListener('pointerdown', e=>{
   if(aimId!==null) return;                    // ikinci parmak nişanı bozmaz
   aimId = e.pointerId;
   try{ cvs.setPointerCapture(e.pointerId); }catch(err){}
-  if(ball.grounded) startAim(e.clientX, e.clientY);
+  if(ball.grounded || ball.airShots > 0) startAim(e.clientX, e.clientY);
   else buffered = true;                        // havadayken bas, inince nişan başlasın
 });
 
@@ -851,13 +987,27 @@ function release(e){
   aimId = null; buffered = false;
   if(!aim){ return; }
   const v = launchVec();
-  if(v.t > .08 && ball && ball.grounded){
+  const air = !ball.grounded && ball.airShots > 0;
+  if(v.t > .08 && ball && (ball.grounded || air)){
     const p = ball.on;
     if(p && p.type==='crumble' && p.fuse==null) p.fuse = 28;
     ball.grounded = false; ball.on = null;
-    ball.vx = v.x; ball.vy = v.y; ball.y -= 2;
+    ball.vx = v.x; ball.vy = v.y;
+    if(!air) ball.y -= 2;
+    const rocket = ball.rocket;
+    if(air){
+      ball.airShots--;
+      burst(ball.x, ball.y, VIOLET, 14); ring(ball.x, ball.y, VIOLET);
+      Snd.airshot(); addShake(3);
+    }
+    if(rocket){
+      ball.rocket = false;
+      burst(ball.x, ball.y, AMBER, 22); ring(ball.x, ball.y, AMBER);
+      flash(AMBER, .3); Snd.rocket(); addShake(6); buzz(22);
+    }
     dust(ball.x, ball.y+BR, 6, GREY, 2.4);
     Snd.launch(v.t); buzz(8); addShake(v.t*1.8);
+    syncPower();
     if(!save.taught){ save.taught = true; persist(); }
   }
   aim = null;
@@ -905,6 +1055,107 @@ syncSound(); refreshMenu();
 const pxAt = (p,tf)=> p.move==='h' ? p.bx + Math.sin(tf*p.spd+p.ph)*p.amp : p.x;
 const pyAt = (p,tf)=> p.move==='v' ? p.by + Math.sin(tf*p.spd+p.ph)*p.amp : p.y;
 
+/* bölgeye göre değişen, kamerayla farklı hızda kayan arka plan katmanları */
+const BAND = 1400;
+function drawParallax(){
+  if(quality < .5) return;
+  const motif = ZONES[zi].motif;
+  ctx.strokeStyle = ink; ctx.fillStyle = ink; ctx.lineCap='round';
+  for(const L of [{d:.22, n:6, s:1.5, a:.05}, {d:.46, n:8, s:1.0, a:.075}]){
+    const off = cam * L.d;
+    ctx.globalAlpha = L.a;
+    for(let i=0;i<L.n;i++){
+      const h1 = (i*2654435761) >>> 0;
+      const x = PL + 18 + (h1 % 1000)/1000 * (PR-PL-36);
+      const base = (h1 >>> 10) % BAND;
+      let y = ((base - off) % BAND + BAND) % BAND - 250;
+      const sc = L.s * (0.7 + ((h1>>>20)%100)/220);
+      drawMotif(motif, x, y, 30*sc, ((h1>>>7)%628)/100);
+    }
+  }
+  ctx.globalAlpha = 1; ctx.lineCap='butt';
+}
+function drawMotif(m, x, y, r, rot){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  ctx.beginPath();
+  if(m==='dot'){ ctx.arc(0,0,r*.7,0,6.3); ctx.fill(); }
+  else if(m==='shard'){
+    ctx.moveTo(0,-r); ctx.lineTo(r*.5,r*.35); ctx.lineTo(-r*.42,r*.7); ctx.closePath(); ctx.fill();
+  }
+  else if(m==='drip'){
+    ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.62,0, 0,r); ctx.quadraticCurveTo(-r*.62,0, 0,-r); ctx.fill();
+  }
+  else if(m==='arc'){
+    ctx.lineWidth=r*.2; ctx.arc(0,0,r,-.5,2.1); ctx.stroke();
+  }
+  else if(m==='crack'){
+    ctx.lineWidth=r*.14;
+    ctx.moveTo(-r,-r*.6);
+    for(let k=1;k<=5;k++) ctx.lineTo(-r + k*r*.4, -r*.6 + (k%2?r*.5:0) + k*r*.16);
+    ctx.stroke();
+  }
+  else { // bolt
+    ctx.moveTo(r*.2,-r); ctx.lineTo(-r*.35,r*.1); ctx.lineTo(r*.05,r*.1);
+    ctx.lineTo(-r*.25,r); ctx.lineTo(r*.42,-r*.15); ctx.lineTo(0,-r*.15); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawOrb(o, tf){
+  if(o.taken) return;
+  const c = PW[o.type].c;
+  const bob = Math.sin(tf*.045 + o.ph)*5;
+  const y = o.y - cam + bob;
+  const pulse = .5 + .5*Math.sin(tf*.07 + o.ph);
+
+  ctx.globalAlpha = .16 + pulse*.16; ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(o.x, y, 24 + pulse*5, 0, 6.3); ctx.fill();
+  ctx.globalAlpha = .5 + pulse*.35; ctx.strokeStyle = c; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(o.x, y, 17, 0, 6.3); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(o.x, y, 11, 0, 6.3); ctx.fill();
+
+  ctx.strokeStyle = paper; ctx.fillStyle = paper; ctx.lineWidth = 2;
+  ctx.beginPath();
+  if(o.type==='shield'){ ctx.arc(o.x, y+1.5, 5, Math.PI*1.15, Math.PI*1.85); ctx.stroke(); }
+  else if(o.type==='rocket'){
+    ctx.moveTo(o.x, y-5.5); ctx.lineTo(o.x+4.5, y+4.5); ctx.lineTo(o.x-4.5, y+4.5);
+    ctx.closePath(); ctx.fill();
+  }else{
+    ctx.arc(o.x-3.4, y, 2.3, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.arc(o.x+3.4, y, 2.3, 0, 6.3); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* konik şerit iz — noktalar yerine gerçek bir kuyruk */
+function drawTrail(bx, by){
+  const T = ball.trail, n = T.length;
+  if(n < 4) return;
+  const wide = combo >= 3 ? 1.15 : .85;
+  const up = [], dn = [];
+  for(let i=0;i<n;i++){
+    const p = T[i];
+    const a = T[Math.max(0,i-1)], b = T[Math.min(n-1,i+1)];
+    let dx = b.x-a.x, dy = b.y-a.y;
+    const L = Math.hypot(dx,dy) || 1;
+    const nx = -dy/L, ny = dx/L;
+    const w = BR * (i/n) * wide;
+    up.push([p.x+nx*w, p.y-cam+ny*w]);
+    dn.push([p.x-nx*w, p.y-cam-ny*w]);
+  }
+  ctx.beginPath();
+  ctx.moveTo(up[0][0], up[0][1]);
+  for(let i=1;i<n;i++) ctx.lineTo(up[i][0], up[i][1]);
+  ctx.lineTo(bx, by-cam);
+  for(let i=n-1;i>=0;i--) ctx.lineTo(dn[i][0], dn[i][1]);
+  ctx.closePath();
+  ctx.globalAlpha = combo >= 3 ? .3 : .17;
+  ctx.fillStyle = combo >= 3 ? MINT : ink;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
 function rr(x,y,w,h,r){
   r=Math.min(r,h/2,w/2);
   ctx.beginPath(); ctx.moveTo(x+r,y);
@@ -938,7 +1189,8 @@ function drawSpike(s){
 }
 
 function drawPlat(p, tf){
-  const x = pxAt(p,tf), y = pyAt(p,tf) - cam;
+  const pr = p.press || 0;
+  const x = pxAt(p,tf) - p.w*pr*.045, y = pyAt(p,tf) - cam + pr*4.5;
   const c = p.type==='ground' || p.type==='normal' ? ink : COLOR[p.type];
   ctx.fillStyle = c;
 
@@ -958,19 +1210,12 @@ function drawPlat(p, tf){
       ctx.stroke(); ctx.globalAlpha=1;
     }
   }
-  else { rr(x, y, p.w, p.h, 7); ctx.fill(); }
+  else { rr(x, y, p.w*(1+pr*.09), p.h*(1-pr*.3), 7); ctx.fill(); }
 
   if(p.type==='bouncy'){
     ctx.strokeStyle=c; ctx.lineWidth=2.5; ctx.globalAlpha=.5;
     ctx.beginPath(); ctx.moveTo(x+4,y-6); ctx.quadraticCurveTo(x+p.w/2,y-13,x+p.w-4,y-6);
     ctx.stroke(); ctx.globalAlpha=1;
-  }else if(p.type==='sticky'){
-    ctx.fillStyle=paper; ctx.globalAlpha=.55;
-    for(let i=x+8;i<x+p.w-4;i+=11){ ctx.beginPath(); ctx.arc(i,y+p.h*.5,1.8,0,6.3); ctx.fill(); }
-    ctx.globalAlpha=1;
-  }else if(p.type==='slippery'){
-    ctx.fillStyle='#fff'; ctx.globalAlpha=.75;
-    rr(x+6,y+3,Math.max(10,p.w*.42),3,2); ctx.fill(); ctx.globalAlpha=1;
   }else if(p.type==='normal'){
     ctx.fillStyle=paper; ctx.globalAlpha=.22;
     rr(x+5,y+3,p.w-10,3,2); ctx.fill(); ctx.globalAlpha=1;
@@ -984,15 +1229,59 @@ function drawPlat(p, tf){
 function drawBall(bx, by){
   const sp = Math.hypot(ball.vx, ball.vy);
   const glow = Math.min(combo,10)/10;
-  for(let i=0;i<ball.trail.length;i++){
-    const t=ball.trail[i], a=(i/ball.trail.length)*(.16+glow*.2);
-    ctx.globalAlpha=a; ctx.fillStyle = combo>=3 ? MINT : ink;
-    ctx.beginPath(); ctx.arc(t.x, t.y-cam, BR*(.4+i/ball.trail.length*.5), 0, 6.3); ctx.fill();
+  drawTrail(bx, by);
+
+  // hız çizgileri
+  if(sp > 17 && quality > .5 && !reduceMotion){
+    const a = Math.atan2(ball.vy, ball.vx), k = Math.min(1,(sp-17)/13);
+    ctx.strokeStyle = ink; ctx.globalAlpha = .16*k; ctx.lineWidth = 1.6; ctx.lineCap='round';
+    ctx.beginPath();
+    for(let i=0;i<5;i++){
+      const off = (i-2)*9, ox = -Math.sin(a)*off, oy = Math.cos(a)*off;
+      const L = 26 + (2-Math.abs(i-2))*16;
+      ctx.moveTo(bx+ox - Math.cos(a)*BR*1.4, by-cam+oy - Math.sin(a)*BR*1.4);
+      ctx.lineTo(bx+ox - Math.cos(a)*(BR*1.4+L), by-cam+oy - Math.sin(a)*(BR*1.4+L));
+    }
+    ctx.stroke(); ctx.globalAlpha=1; ctx.lineCap='butt';
   }
-  ctx.globalAlpha=1;
+
   if(combo>=3){
     ctx.strokeStyle=MINT; ctx.globalAlpha=.28+glow*.3; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.arc(bx, by-cam, BR+5+glow*3, 0, 6.3); ctx.stroke(); ctx.globalAlpha=1;
+  }
+  if(ball.shield){
+    const pl = .5+.5*Math.sin(tick*.09);
+    ctx.strokeStyle=ICE; ctx.globalAlpha=.45+pl*.35; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(bx, by-cam, BR+9+pl*2, 0, 6.3); ctx.stroke();
+    ctx.globalAlpha=.12+pl*.1; ctx.fillStyle=ICE;
+    ctx.beginPath(); ctx.arc(bx, by-cam, BR+9+pl*2, 0, 6.3); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  if(ball.airShots>0){
+    ctx.strokeStyle=VIOLET; ctx.globalAlpha=.6; ctx.lineWidth=2.4; ctx.setLineDash([4,7]);
+    ctx.beginPath(); ctx.arc(bx, by-cam, BR+15, tick*.03, tick*.03+6.283); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=1;
+  }
+  if(ball.rocket){
+    const pulse = .55+.45*Math.sin(tick*.2);
+    if(sp > 3){
+      const a = Math.atan2(ball.vy, ball.vx);
+      for(let i=1;i<=3;i++){
+        const d = BR + i*9, r = (4.6 - i*.9)*(0.8+pulse*.4);
+        ctx.globalAlpha = (.55 - i*.13);
+        ctx.fillStyle = i===1 ? '#FFE27A' : AMBER;
+        ctx.beginPath();
+        ctx.arc(bx - Math.cos(a)*d, by-cam - Math.sin(a)*d, r, 0, 6.3); ctx.fill();
+      }
+    }else{
+      ctx.strokeStyle=AMBER; ctx.globalAlpha=.4+pulse*.4; ctx.lineWidth=2.6;
+      ctx.beginPath(); ctx.arc(bx, by-cam, BR+7+pulse*2, 0, 6.3); ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+  if(ball.inv>0 && (tick>>2)%2===0){
+    ctx.strokeStyle=ICE; ctx.globalAlpha=.5; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(bx, by-cam, BR+5, 0, 6.3); ctx.stroke(); ctx.globalAlpha=1;
   }
   const st = clamp(sp/34, 0, .32), ang = Math.atan2(ball.vy, ball.vx);
   ctx.save();
@@ -1083,6 +1372,7 @@ function draw(alpha){
   ctx.setTransform(DPR*S,0,0,DPR*S,(offX+sx)*DPR, sy*DPR);
 
   ctx.fillStyle = paper; ctx.fillRect(0, -4, VW, visH+8);
+  drawParallax();
 
   // yükseklik çizgileri
   ctx.strokeStyle=ink; ctx.fillStyle=ink;
@@ -1125,7 +1415,9 @@ function draw(alpha){
     const y = pyAt(p,tf) - cam;
     if(p.gone) continue;
     if(y > visH+80 || y+p.h < -80) continue;
-    if(p.kind==='spike') drawSpike(p); else drawPlat(p, tf);
+    if(p.kind==='spike') drawSpike(p);
+    else if(p.kind==='orb') drawOrb(p, tf);
+    else drawPlat(p, tf);
   }
   ctx.setTransform(DPR*S,0,0,DPR*S,(offX+sx)*DPR, sy*DPR);
 
@@ -1164,6 +1456,16 @@ function draw(alpha){
   }
   ctx.globalAlpha=1;
 
+  // bölge geçiş bandı
+  if(sweep > 0){
+    const yy = (1-sweep)*(visH+180) - 90;
+    const g = ctx.createLinearGradient(0, yy-90, 0, yy+90);
+    g.addColorStop(0,'rgba(46,216,168,0)');
+    g.addColorStop(.5,'rgba(46,216,168,'+(sweep*.34).toFixed(3)+')');
+    g.addColorStop(1,'rgba(46,216,168,0)');
+    ctx.fillStyle=g; ctx.fillRect(PL, yy-90, PR-PL, 180);
+  }
+
   // düşme uyarısı — alt kenar kırmızılaşır
   if(state==='play' && cam >= camBest + visH*FALLBACK - 1){
     const margin = (cam+visH) - ball.y;
@@ -1174,7 +1476,26 @@ function draw(alpha){
       ctx.fillStyle=g; ctx.fillRect(0, visH*.78, VW, visH*.22);
     }
   }
+  // vinyet — seri yükseldikçe ve düşme sınırına yaklaştıkça koyulaşır
+  const vigT = Math.max(Math.min(combo,10)/10*.5,
+                        state==='play' && cam >= camBest + visH*FALLBACK - 1
+                          ? clamp(1-((cam+visH)-ball.y)/(visH*.42),0,1) : 0);
+  vig += (vigT - vig)*.08;
+  if(vig > .02 && !reduceMotion){
+    const g = ctx.createRadialGradient(VW/2, visH*.5, visH*.22, VW/2, visH*.5, visH*.76);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,'+(vig*.42).toFixed(3)+')');
+    ctx.fillStyle=g; ctx.fillRect(0, -4, VW, visH+8);
+  }
+
   ctx.setTransform(DPR,0,0,DPR,0,0);
+
+  // tam ekran flaş
+  if(flashA > .01){
+    const [r,g2,b2] = hex(flashC);
+    ctx.fillStyle = 'rgba('+r+','+g2+','+b2+','+Math.min(.42,flashA).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);
+  }
 }
 
 /* ================= döngü ================= */
