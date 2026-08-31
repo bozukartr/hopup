@@ -12,14 +12,26 @@ açman yeterli. GitHub Pages'e olduğu gibi yayınlanır.
 Topun üstüne bas, sapanı geri çek ve bırak. Ne kadar çok çekersen o kadar güçlü
 fırlar. Yörünge önizlemesi ilk çarpışmada kesilir — nereye ineceğini gösterir.
 
+Üç zemin, üç ayrı fiil:
+
 | Zemin | Davranış |
 |---|---|
-| Sade | Tutunur, hızını yarıya indirir |
-| Zıplak | Düşüş hızını geri verir, seni yukarı fırlatır |
-| Yapışkan | Anında durdurur, kayma yok |
-| Kaygan | Neredeyse hiç sürtünme yok, kaydırır |
-| Çürük | Bastıktan yarım saniye sonra kırılır |
-| Diken | Değersen top patlar |
+| Sade | Tutunur, hızını yarıya indirir — düşün ve nişan al |
+| Zıplak | Düşüş hızını geri verir, seni yukarı fırlatır — momentum |
+| Çürük | Bastıktan yarım saniye sonra kırılır — acele et |
+
+Diken kırmızıdır; değersen top patlar.
+
+## Güçlendirmeler
+
+Havada asılı duran küreler. Toplamak için biraz sapman gerekir — bedava değil,
+bir karar.
+
+| Küre | Etki |
+|---|---|
+| **Kalkan** (mavi) | Bir ölümü emer. Düşmeden kurtarırsa ulaştığın en yüksek noktayı kaybedersin |
+| **Roket** (sarı) | Sonraki atış %70 daha güçlü; alev kuyruğu bırakır |
+| **Çift atış** (mor) | Havadayken bir kez daha nişan alıp fırlatabilirsin, üst üste 3'e kadar |
 
 **Kamera seni sonsuza kadar beklemez.** En yüksek noktandan yarım ekrandan fazla
 düşersen koşu biter. Alt kenarın kırmızılaşması son uyarıdır.
@@ -54,7 +66,15 @@ logaritmik bir eğriyle sürekli tırmanır, hiçbir yükseklikte düzleşmez.
   yavaş cihazlarda efekt bütçesi otomatik düşer.
 - Ses WebAudio ile üretilir, dosya indirilmez.
 - Ekran dışında kalan platformlar budanır; nesne sayısı sabit kalır.
-- `prefers-reduced-motion` sarsıntı ve parçacıkları kısar.
+- `prefers-reduced-motion` sarsıntı, parçacık, flaş ve vinyeti kapatır.
+
+## Görsel katman
+
+Bölgeye göre değişen iki hızlı parallax arka plan (nokta, buz kıymığı, reçine
+damlası, rüzgâr yayı, çatlak, şimşek), topun arkasında konikleşen şerit iz,
+yüksek hızda hız çizgileri, inişte platform ezilmesi, tam ekran renk flaşları,
+seriyle koyulaşan vinyet, bölge geçişinde ekranı tarayan bant ve toplama
+patlamaları. Hepsi kare hızına göre bütçelenir; ölçümde her bölgede 60 fps.
 
 ## Testler
 
