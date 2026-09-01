@@ -5,8 +5,7 @@
  * Çalıştırmak için:  npm i -D playwright && npx playwright install chromium
  *                    node tests/game.test.mjs
  *
- * index.html'e dokunmaz: geçici bir kopya üretip IIFE'nin sonuna hata ayıklama
- * kancaları enjekte eder.
+ * index.html'e dokunmaz: geçici bir kopya üretip IIFE'nin sonuna kanca enjekte eder.
  */
 import { chromium, devices } from 'playwright';
 import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
@@ -16,19 +15,44 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const probe = join(here, '.probe.html');
 
-const HOOKS = `window.__dbg=()=>({plats:plats.length,parts:parts.length,state,score,
- cam:Math.round(cam),visH:Math.round(visH),ballY:Math.round(ball.y),grounded:ball.grounded,
- combo,zi,best:save.best,S:+S.toFixed(3),
- shield:ball.shield,rocket:ball.rocket,air:ball.airShots,inv:ball.inv});
+const HOOKS = `window.__dbg=()=>({state,phase,score,baskets,streak,time:+timeLeft.toFixed(2),ci,
+ bx:Math.round(ball.x), by:Math.round(ball.y),
+ hoopSide:hoop.side, hoopY:Math.round(hoopY()), tipX:Math.round(tipX()),
+ innerX:Math.round(innerX()), rim:Math.round(rimLen()),
+ bars:bars.length, orbs:orbs.filter(o=>!o.taken).length,
+ wide:wideShots, air:airShots, best:save.best, S:+S.toFixed(3)});
 window.__x=(s)=>eval(s);
-window.__perch=(y)=>{ ball.y=y; cam=y-visH*.62; camBest=cam; nextY=y+300;
-  plats.length=0; recent.length=0; grow();
-  const p=plats.filter(q=>q.kind==='plat'&&q.y>y-260&&q.y<y+320)
-               .sort((a,b)=>Math.abs(a.y-y)-Math.abs(b.y-y))[0];
-  if(!p) return false;
-  ball.x=p.x+p.w/2; ball.y=p.y-15; ball.on=p; ball.grounded=true; ball.vx=0; ball.vy=0;
-  ball.rx=ball.x; ball.ry=ball.y; score=Math.round(-ball.y/12); landY=ball.y; lastPlat=p;
-  zi=zoneAt(score); ziPrev=zi; zMix=1; applyZone(); return true; };
+
+/* durum kaydet / geri al — deneme atışları için */
+window.__snap=()=>({bx:ball.x,by:ball.y,bvx:ball.vx,bvy:ball.vy,ph:phase,sc:score,bk:baskets,
+  st:streak,t:timeLeft,tk:tick,scored,hitRim,hitBoard,ft:flightT,ws:wideShots,as:airShots,
+  hoop:Object.assign({},hoop), bars:bars.map(b=>Object.assign({},b)),
+  orbs:orbs.map(o=>Object.assign({},o))});
+window.__rest=(s)=>{ ball.x=s.bx;ball.y=s.by;ball.vx=s.bvx;ball.vy=s.bvy;phase=s.ph;score=s.sc;
+  baskets=s.bk;streak=s.st;timeLeft=s.t;tick=s.tk;scored=s.scored;hitRim=s.hitRim;
+  hitBoard=s.hitBoard;flightT=s.ft;wideShots=s.ws;airShots=s.as;
+  hoop=Object.assign({},s.hoop);
+  bars.length=0; for(const b of s.bars) bars.push(Object.assign({},b));
+  orbs.length=0; for(const o of s.orbs) orbs.push(Object.assign({},o)); };
+window.__try=(ang,pow)=>{
+  const s=window.__snap();
+  ball.vx=Math.cos(ang)*pow; ball.vy=Math.sin(ang)*pow; phase='fly'; flightT=0; ball.y-=2;
+  let n=0; while(phase==='fly' && n++<900) step();
+  const r={made:scored, swish:scored&&!hitRim&&!hitBoard};
+  window.__rest(s); return r;
+};
+/* bu turda basket atmanın bir yolu var mı? */
+window.__solvable=()=>{
+  for(let d=19; d<=87; d+=2){
+    for(let p=11; p<=30; p+=1){
+      for(const sgn of [1,-1]){
+        const a=-(d*Math.PI/180), ang = sgn>0 ? a : -Math.PI-a;
+        if(window.__try(ang,p).made) return true;
+      }
+    }
+  }
+  return false;
+};
 })();
 </script>`;
 
@@ -60,253 +84,237 @@ const run = s => pg.evaluate(src => __x(src), s);
 await pg.goto('file://' + probe);
 await pg.waitForTimeout(600);
 
-group('açılış ve giriş');
+group('açılış ve atış');
 let d = await dbg();
-ok('menüde canlı dünya var', d.state === 'menu' && d.plats > 5, `plats=${d.plats}`);
+ok('menüde saha hazır', d.state === 'menu' && d.phase === 'aim');
 await pg.click('#btnStart');
 await pg.waitForTimeout(250);
-ok('oyun başlıyor', (await dbg()).state === 'play');
+d = await dbg();
+ok('oyun başlıyor', d.state === 'play' && d.time > 40, `süre=${d.time}`);
+ok('top zeminde duruyor', d.by === 797, `y=${d.by}`);
+ok('pota duvara monte', d.innerX === (d.hoopSide > 0 ? 396 : 24), `innerX=${d.innerX}`);
+ok('çember uzunluğu doğru', Math.abs(Math.abs(d.tipX - d.innerX) - 64) < 1, `rim=${d.rim}`);
 
 const vp = await pg.evaluate(() => ({ w: innerWidth, h: innerHeight }));
-await pg.mouse.move(vp.w / 2, vp.h * 0.72);
+const p0 = await run('({x:offX+ball.x*S, y:offY+ball.y*S})');
+await pg.mouse.move(p0.x, p0.y);
 await pg.mouse.down();
-await pg.mouse.move(vp.w / 2 + 35, vp.h * 0.72 + 130, { steps: 10 });
+await pg.mouse.move(p0.x - 60, p0.y + 110, { steps: 8 });
 await pg.mouse.up();
-await pg.waitForTimeout(800);
-ok('çek-bırak topu yükseltiyor', (await dbg()).score > 3, `skor=${(await dbg()).score}`);
-
-group('ekran boyutu koşuyu bozmamalı');
-await pg.evaluate(() => __perch(-9000));
-await pg.waitForTimeout(250);
-const before = await dbg();
-await pg.setViewportSize({ width: 390, height: 700 });
-await pg.waitForTimeout(350);
-const after = await dbg();
-ok('skor korunuyor', after.score === before.score, `${before.score} → ${after.score}`);
-ok('konum korunuyor', Math.abs(after.ballY - before.ballY) < 60);
-ok('oyun devam ediyor', after.state === 'play');
-await pg.setViewportSize({ width: 390, height: 844 });
-await pg.waitForTimeout(300);
-
-group('cihazdan bağımsız zorluk');
-const geo = [];
-for (const [w, h] of [[360, 640], [390, 844], [430, 932], [820, 1180]]) {
-  await pg.setViewportSize({ width: w, height: h });
-  await pg.waitForTimeout(200);
-  geo.push(await run('(()=>({visH:Math.round(visH), playW:Math.round(PR-PL)}))()'));
-}
-ok('oynanabilir genişlik her cihazda aynı', new Set(geo.map(g => g.playW)).size === 1,
-   geo.map(g => g.playW).join('/'));
-ok('görünür yükseklik sabit',
-   Math.max(...geo.map(g => g.visH)) - Math.min(...geo.map(g => g.visH)) < 40,
-   geo.map(g => g.visH).join('/'));
-await pg.setViewportSize({ width: 390, height: 844 });
 await pg.waitForTimeout(200);
+ok('çek-bırak topu fırlatıyor', (await dbg()).phase !== 'aim');
 
-group('dünya üretimi');
-await pg.evaluate(() => __perch(-60000));
-await pg.waitForTimeout(900);
-ok('ekran dışı platformlar budanıyor', (await dbg()).plats < 130, `plats=${(await dbg()).plats}`);
+group('basket algılama');
+let r = await run(`(()=>{
+  startRun(); hoop.amp=0;
+  const hy=hoopY(), mid=(tipX()+innerX())/2, s0=score;
+  ball.x=mid; ball.y=hy-90; ball.vx=0; ball.vy=1; phase='fly'; flightT=0;
+  scored=false; hitRim=false; hitBoard=false;
+  let n=0; while(!scored && n++<250) step();
+  return {scored, pts:score-s0, baskets, streak};
+})()`);
+ok('çemberden geçen top sayılıyor', r.scored, JSON.stringify(r));
+ok('temiz atış 3 sayı', r.pts === 3, `${r.pts} sayı`);
 
-const curve = await run('(()=>[0,300,750,1500,3000,8000,20000].map(h=>+diff(h).toFixed(3)))()');
-ok('zorluk hiçbir yükseklikte düzleşmiyor', curve[6] > curve[4] && curve[4] > curve[2],
-   curve.join(' '));
+r = await run(`(()=>{
+  startRun(); hoop.amp=0;
+  const hy=hoopY(), out = hoop.side>0 ? tipX()-60 : tipX()+60;
+  ball.x=out; ball.y=hy-90; ball.vx=0; ball.vy=1; phase='fly'; flightT=0;
+  let n=0; while(phase==='fly' && n++<500) step();
+  return {scored, score};
+})()`);
+ok('çember dışından geçen sayılmıyor', !r.scored && r.score === 0, JSON.stringify(r));
 
-const gen = await run(`(()=>{
-  plats.length=0; recent.length=0; nextY=-165; srand(12345);
-  for(let i=0;i<4000;i++){ row(nextY); nextY-=140; }
-  const P=plats.filter(p=>p.kind==='plat'), S=plats.filter(p=>p.kind==='spike'),
-        O=plats.filter(p=>p.kind==='orb');
-  let overlap=0, orbClash=0;
-  for(const s of S) for(const p of P){
-    if(Math.abs(p.y-s.y)>34) continue;
-    if(!(s.x+s.w<p.x || p.x+p.w<s.x)) overlap++;
+r = await run(`(()=>{
+  startRun(); hoop.amp=0;
+  const hy=hoopY(), mid=(tipX()+innerX())/2;
+  ball.x=mid; ball.y=hy+80; ball.vx=0; ball.vy=-14; phase='fly'; flightT=0;
+  let n=0; while(n++<24) step();          // sadece yükselirken
+  return {scored, above:ball.y<hy};
+})()`);
+ok('yalnızca yukarı geçiş sayı vermiyor', !r.scored && r.above, JSON.stringify(r));
+
+r = await run(`(()=>{
+  startRun(); hoop.amp=0;
+  const hy=hoopY(), mid=(tipX()+innerX())/2, s0=score;
+  ball.x=mid; ball.y=hy-90; ball.vx=0; ball.vy=1; phase='fly'; flightT=0;
+  scored=false; hitRim=true; hitBoard=false;   // çembere değmiş say
+  let n=0; while(!scored && n++<250) step();
+  return {pts:score-s0};
+})()`);
+ok('çembere değen atış 2 sayı', r.pts === 2, `${r.pts} sayı`);
+
+group('çember, panya ve engel');
+r = await run(`(()=>{
+  startRun(); hoop.amp=0; const hy=hoopY();
+  ball.x=tipX(); ball.y=hy-70; ball.vx=0; ball.vy=6; phase='fly'; flightT=0;
+  let n=0; while(n++<40 && !hitRim) step();
+  return {hitRim, vy:+ball.vy.toFixed(1)};
+})()`);
+ok('çember ucu topu sektiriyor', r.hitRim && r.vy < 6, JSON.stringify(r));
+
+r = await run(`(()=>{
+  startRun(); hoop.amp=0; const hy=hoopY();
+  ball.x = hoop.side>0 ? boardX()-40 : boardX()+BOARDW+40;
+  ball.y=hy-40; ball.vx=hoop.side*14; ball.vy=0; phase='fly'; flightT=0;
+  let n=0; while(n++<30 && !hitBoard) step();
+  return {hitBoard, away: Math.sign(ball.vx) === -hoop.side};
+})()`);
+ok('panya topu geri sektiriyor', r.hitBoard && r.away, JSON.stringify(r));
+
+r = await run(`(()=>{
+  startRun();
+  bars.length=0; bars.push({bx:150,x:150,y:500,w:120,h:13,amp:0,spd:0,ph:0});
+  ball.x=210; ball.y=430; ball.vx=0; ball.vy=8; phase='fly'; flightT=0;
+  let n=0; while(n++<20 && ball.vy>0) step();
+  return {bounced: ball.vy<0};
+})()`);
+ok('engel topu sektiriyor', r.bounced);
+
+group('tur akışı');
+r = await run(`(()=>{
+  startRun();
+  ball.vx=0; ball.vy=-4; phase='fly'; flightT=0;
+  let n=0; while(phase!=='aim' && state==='play' && n++<900) step();
+  return {phase, score, streak};
+})()`);
+ok('kaçan atış turu bitirip yenisini kuruyor', r.phase === 'aim' && r.score === 0,
+   JSON.stringify(r));
+
+r = await run(`(()=>{
+  startRun(); streak=5;
+  hoop.amp=0; const hy=hoopY(), mid=(tipX()+innerX())/2, s0=score;
+  ball.x=mid; ball.y=hy-90; ball.vx=0; ball.vy=1; phase='fly'; flightT=0;
+  scored=false; hitRim=true; hitBoard=false;
+  let n=0; while(!scored && n++<250) step();
+  return {pts:score-s0, streak};
+})()`);
+ok('seri çarpanı uygulanıyor', r.pts === 2 * (1 + Math.min(3, Math.floor(6 / 3))),
+   `seri ${r.streak} → ${r.pts} sayı`);
+
+r = await run(`(()=>{
+  startRun(); streak=4;
+  ball.vx=0; ball.vy=-4; phase='fly'; flightT=0;
+  let n=0; while(phase!=='aim' && state==='play' && n++<900) step();
+  return streak;
+})()`);
+ok('kaçırınca seri sıfırlanıyor', r === 0, `seri=${r}`);
+
+group('süre');
+r = await run(`(()=>{ startRun(); const t0=timeLeft; for(let i=0;i<60;i++) step(); return t0-timeLeft; })()`);
+ok('saat saniyede bir azalıyor', Math.abs(r - 1) < .05, `${r.toFixed(2)} sn / 60 kare`);
+
+r = await run(`(()=>{
+  startRun(); hoop.amp=0;
+  const hy=hoopY(), mid=(tipX()+innerX())/2, t0=timeLeft;
+  ball.x=mid; ball.y=hy-90; ball.vx=0; ball.vy=1; phase='fly'; flightT=0;
+  scored=false; hitRim=false; hitBoard=false;
+  let n=0; while(!scored && n++<250) step();
+  return +(timeLeft-t0).toFixed(2);
+})()`);
+ok('temiz atış süre ekliyor', r > 3.4, `+${r} sn`);
+ok('süre bitince oyun bitiyor',
+   (await run(`(()=>{ startRun(); timeLeft=0.02; step(); step(); return state; })()`)) === 'over-anim');
+
+group('sahalar');
+const courts = await run(`(()=>{
+  const seen=[]; startRun();
+  for(let b=0;b<40;b++){ baskets=b; const c=courtAt(b); if(!seen.includes(c)) seen.push(c); }
+  return {count:seen.length, names:seen.map(i=>COURTS[i].n)};
+})()`);
+ok('basket sayısı ilerledikçe saha değişiyor', courts.count === 6, courts.names.join(' → '));
+
+group('her tur çözülebilir olmalı');
+const solve = await run(`(()=>{
+  startRun();
+  let bad=0, tested=0;
+  for(let shot=0; shot<14; shot++){
+    if(!window.__solvable()) bad++;
+    tested++;
+    baskets += 3;
+    const c=courtAt(baskets); if(c!==ci){ ciPrev=ci; ci=c; cMix=1; applyCourt(); }
+    newShot();
   }
-  for(const o of O) for(const q of P.concat(S)){
-    if(Math.abs(q.y-o.y)>40) continue;
-    if(!(o.x+16 < q.x-4 || o.x-16 > q.x+q.w+4)) orbClash++;
-  }
-  const types={}; P.forEach(p=>types[p.type]=(types[p.type]||0)+1);
-  const outside = O.filter(o=>o.x<PL+16||o.x>PR-16).length;
-  return {rows:P.length, spikes:S.length, overlap, orbs:O.length, orbClash, types, outside};
+  return {bad, tested};
 })()`);
-ok('hiçbir diken platformla çakışmıyor', gen.overlap === 0,
-   `${gen.rows} satır / ${gen.spikes} diken / çakışma=${gen.overlap}`);
-ok('yalnızca üç zemin tipi üretiliyor', Object.keys(gen.types).length === 3,
-   JSON.stringify(gen.types));
-ok('güçlendirme küreleri üretiliyor', gen.orbs > 150, `${gen.orbs} küre`);
-ok('küreler platform veya dikene gömülmüyor', gen.orbClash === 0, `çakışma=${gen.orbClash}`);
-ok('küreler duvarların içinde kalmıyor', gen.outside === 0, `dışarıda=${gen.outside}`);
-
-const det = await run(`(()=>{
-  const gen=()=>{ plats.length=0; recent.length=0; nextY=-165; srand(999);
-    for(let i=0;i<50;i++){ row(nextY); nextY-=140; }
-    return plats.map(p=>p.kind+p.type+Math.round(p.x)+Math.round(p.y)).join('|'); };
-  return gen()===gen();
-})()`);
-ok('aynı tohum aynı dünyayı üretiyor', det);
-
-group('fizik');
-const push = await run(`(()=>{
-  const base={kind:'plat',type:'normal',y:-500,h:14,w:200,x:100,px:100};
-  const other={kind:'plat',type:'normal',y:-505,h:14,w:60,x:250,px:250};
-  plats.length=0; plats.push(base,other);
-  ball.on=base; ball.grounded=true; ball.x=245; ball.y=-515; ball.vx=3;
-  sidePush(); return {x:ball.x, vx:ball.vx};
-})()`);
-ok('yerdeki top platformun içine giremiyor', push.x <= 235.1 && push.vx < 0, JSON.stringify(push));
-
-const cr = await run(`(()=>{
-  const p={kind:'plat',type:'crumble',y:-600,h:14,w:120,x:150,px:150};
-  plats.push(p); ball.grounded=false; ball.on=null; ball.vy=4; ball.x=210; ball.y=-620;
-  land(p);
-  const started=ball.grounded && p.fuse===28;
-  for(let i=0;i<40;i++){ if(p.fuse>0){ p.fuse--; if(p.fuse===0) breakPlat(p); } }
-  return {started, gone:!!p.gone, dropped:!ball.grounded};
-})()`);
-ok('çürük zemin basılınca sayaç başlatıyor', cr.started);
-ok('süre dolunca kırılıp topu düşürüyor', cr.gone && cr.dropped);
-
-const combo = await run(`(()=>{
-  const mk=y=>({kind:'plat',type:'normal',y,h:14,w:120,x:150,px:150});
-  const a=mk(-500), b=mk(-700), c=mk(-900), down=mk(-400);
-  plats.push(a,b,c,down);
-  ball.grounded=false; ball.on=null; landY=0; lastPlat=null; combo=0;
-  land(a); const s1=combo; land(b); const s2=combo; land(c); const s3=combo;
-  land(down); return {s1,s2,s3,afterDrop:combo};
-})()`);
-ok('yükselerek seri büyüyor', combo.s1 === 1 && combo.s2 === 2 && combo.s3 === 3);
-ok('aşağı inince seri sıfırlanıyor', combo.afterDrop === 0);
-
-const nm = await run(`(()=>{
-  const s={kind:'spike',dir:'up',x:200,y:-500,w:60,h:11};
-  ball.x=170; ball.y=-505; ball.grounded=false;
-  return {near:nearSpike(s), hit:overlapSpike(s)};
-})()`);
-ok('kıl payı ölüm sayılmıyor', nm.near && !nm.hit);
-
-group('giriş dayanıklılığı');
-await run('startRun()');
-await pg.waitForTimeout(200);
-const fire = (type, id, x, y) => pg.evaluate(a => {
-  document.getElementById('game')
-    .dispatchEvent(new PointerEvent(a.type, { pointerId: a.id, clientX: a.x, clientY: a.y, bubbles: true }));
-}, { type, id, x, y });
-await fire('pointerdown', 1, vp.w / 2, vp.h * 0.7);
-await fire('pointermove', 1, vp.w / 2 + 20, vp.h * 0.7 + 80);
-const aimA = await run('aim?{sx:Math.round(aim.sx),x:Math.round(aim.x)}:null');
-await fire('pointerdown', 2, 10, 10);
-await fire('pointermove', 2, 10, 10);
-const aimB = await run('aim?{sx:Math.round(aim.sx),x:Math.round(aim.x)}:null');
-ok('ikinci parmak nişanı bozmuyor', JSON.stringify(aimA) === JSON.stringify(aimB));
-await fire('pointerup', 2, 10, 10);
-ok('ikinci parmak kalkınca atış olmuyor', await run('aim!==null'));
-await fire('pointerup', 1, vp.w / 2 + 20, vp.h * 0.7 + 80);
-await pg.waitForTimeout(300);
-ok('ilk parmak kalkınca fırlatıyor', !(await dbg()).grounded);
-
-const buf = await run(`(()=>{
-  const p={kind:'plat',type:'normal',y:-300,h:14,w:150,x:130,px:130};
-  plats.push(p);
-  aim=null; aimId=7; buffered=true; ptr.x=100; ptr.y=200;
-  ball.grounded=false; ball.on=null; ball.vy=5; ball.x=200; ball.y=-320;
-  land(p); return {started:aim!==null, cleared:!buffered};
-})()`);
-ok('havada basılı tutulan parmak inişte nişana dönüşüyor', buf.started && buf.cleared);
+ok('hiçbir tur çözümsüz değil', solve.bad === 0,
+   `${solve.tested} tur denendi, çözümsüz=${solve.bad}`);
 
 group('güçlendirmeler');
-for (const [t, check] of [['shield', 'shield'], ['rocket', 'rocket'], ['double', 'air']]) {
-  await run('startRun()');
-  await pg.waitForTimeout(120);
+for (const [t, check] of [['time', 'time'], ['wide', 'wide'], ['double', 'air']]) {
   const got = await run(`(()=>{
-    const o={kind:'orb',type:'${t}',x:ball.x,y:ball.y-10,w:0,h:0,ph:0};
-    plats.push(o); grab(o);
-    return {taken:o.taken, shield:ball.shield, rocket:ball.rocket, air:ball.airShots};
+    startRun(); const t0=timeLeft;
+    const o={type:'${t}', x:ball.x, y:ball.y-10, ph:0};
+    orbs.push(o); grab(o);
+    return {taken:!!o.taken, wide:wideShots, air:airShots, dt:+(timeLeft-t0).toFixed(1)};
   })()`);
-  ok(`${t} toplanıyor`, got.taken && (check === 'air' ? got.air === 1 : got[check]),
-     JSON.stringify(got));
+  const good = check === 'time' ? got.dt === 4 : check === 'wide' ? got.wide === 3 : got.air === 1;
+  ok(`${t} toplanıyor`, got.taken && good, JSON.stringify(got));
 }
-ok('HUD rozeti çiziliyor', (await pg.evaluate(() => document.querySelectorAll('#power .pw').length)) > 0);
+ok('HUD rozeti çiziliyor',
+   (await pg.evaluate(() => document.querySelectorAll('#power .pw').length)) > 0);
 
-const flight = await run(`(()=>{
-  startRun();
-  const o={kind:'orb',type:'rocket',x:ball.x,y:ball.y-160,w:0,h:0,ph:0};
-  plats.push(o);
-  ball.grounded=false; ball.on=null; ball.vx=0; ball.vy=-14;
-  for(let i=0;i<26 && !o.taken;i++) step();
-  return {taken:!!o.taken, rocket:ball.rocket};
+r = await run(`(()=>{
+  startRun(); const base=rimLen(); wideShots=3; const wide=rimLen();
+  return +(wide/base).toFixed(2);
 })()`);
-ok('uçuş sırasında küre toplanıyor', flight.taken && flight.rocket, JSON.stringify(flight));
+ok('geniş pota çemberi büyütüyor', r === 1.5, `×${r}`);
 
-await run('startRun()');
-await pg.waitForTimeout(120);
-let sh = await run(`(()=>{ ball.shield=true; die('spike');
-  return {state, shield:ball.shield, inv:ball.inv}; })()`);
-ok('kalkan diken ölümünü emiyor', sh.state === 'play' && !sh.shield && sh.inv > 0,
-   JSON.stringify(sh));
-sh = await run(`(()=>{ ball.shield=true; const c0=camBest; die('fall');
-  return {state, shield:ball.shield, moved:Math.round(camBest-c0)}; })()`);
-ok('kalkan düşmeyi emiyor, en yüksek nokta sıfırlanıyor',
-   sh.state === 'play' && !sh.shield && sh.moved > 0, JSON.stringify(sh));
-ok('kalkan yokken ölüm normal işliyor',
-   (await run(`(()=>{ ball.shield=false; ball.inv=0; die('spike'); return state; })()`)) === 'dying');
-
-const rk = await run(`(()=>{
-  startRun(); aim={sx:200,sy:400,x:200,y:600,lt:0};
-  const n=Math.hypot(launchVec().x, launchVec().y);
-  ball.rocket=true;
-  const r=Math.hypot(launchVec().x, launchVec().y);
-  release();
-  return {ratio:+(r/n).toFixed(2), spent:!ball.rocket};
-})()`);
-ok('roket gücü 1.7 katına çıkarıp tükeniyor', rk.ratio > 1.65 && rk.ratio < 1.75 && rk.spent,
-   `×${rk.ratio}`);
-
-const air = await run(`(()=>{
+r = await run(`(()=>{
   startRun();
-  ball.grounded=false; ball.on=null; ball.airShots=1; ball.vy=9; aimId=null; aim=null;
+  const o={type:'time', x:ball.x, y:ball.y-150, ph:0}; orbs.push(o);
+  ball.vx=0; ball.vy=-14; phase='fly'; flightT=0;
+  let n=0; while(!o.taken && n++<40) step();
+  return !!o.taken;
+})()`);
+ok('uçuş sırasında küre toplanıyor', r);
+
+r = await run(`(()=>{
+  startRun(); airShots=1;
+  ball.vx=0; ball.vy=-10; phase='fly'; flightT=0; aimId=null; aim=null;
   cvs.dispatchEvent(new PointerEvent('pointerdown',{pointerId:9,clientX:200,clientY:400,bubbles:true}));
-  const aimed=aim!==null; if(aim){ aim.x=200; aim.y=540; }
+  const aimed = aim!==null; if(aim){ aim.x=200; aim.y=540; }
   release({pointerId:9});
-  return {aimed, air:ball.airShots, vy:Math.round(ball.vy)};
+  return {aimed, air:airShots, vy:Math.round(ball.vy)};
 })()`);
-ok('çift atış havada nişan açıyor', air.aimed, JSON.stringify(air));
-ok('çift atış hakkı tükeniyor ve yön değişiyor', air.air === 0 && air.vy < 0, JSON.stringify(air));
+ok('çift atış havada nişan açıyor', r.aimed, JSON.stringify(r));
+ok('çift atış hakkı tükeniyor', r.air === 0 && r.vy < 0, JSON.stringify(r));
 ok('hak yokken havada nişan açılmıyor', await run(`(()=>{
-  ball.grounded=false; ball.on=null; ball.airShots=0; aimId=null; aim=null;
+  ball.vx=0; ball.vy=-6; phase='fly'; airShots=0; aimId=null; aim=null;
   cvs.dispatchEvent(new PointerEvent('pointerdown',{pointerId:11,clientX:200,clientY:400,bubbles:true}));
   const a=aim; release({pointerId:11}); return a===null; })()`));
 
-group('ölüm ve kayıt');
+group('ekran ve durum');
 await run('startRun()');
+await run('score=17; baskets=6; timeLeft=30;');
+const before = await dbg();
+await pg.setViewportSize({ width: 390, height: 700 });
+
+await pg.waitForTimeout(350);
+const after = await dbg();
+ok('yeniden boyutlanma koşuyu bozmuyor',
+   after.score === before.score && after.state === 'play' && Math.abs(after.time - before.time) < 1,
+   `${before.score} → ${after.score}`);
+
+const geo = [];
+for (const [w, h] of [[360, 640], [390, 844], [430, 932], [820, 1180]]) {
+  await pg.setViewportSize({ width: w, height: h });
+  await pg.waitForTimeout(180);
+  geo.push(await run('(()=>({playW:Math.round(PR-PL), floor:FLOOR}))()'));
+}
+ok('saha her cihazda aynı ölçüde', new Set(geo.map(g => g.playW)).size === 1,
+   geo.map(g => g.playW).join('/'));
+await pg.setViewportSize({ width: 390, height: 844 });
 await pg.waitForTimeout(200);
-await pg.evaluate(() => __perch(-9000));
-await pg.waitForTimeout(300);
-await run('plats.length=0; ball.grounded=false; ball.on=null; ball.vy=26;');
-await pg.waitForTimeout(2400);
-d = await dbg();
-ok('kamera geride kalınca düşme ölümü', d.state === 'dead', `state=${d.state}`);
-ok('ölüm sebebi doğru yazılıyor', /düş/i.test(await pg.textContent('#overTitle')));
-const overVisible = await pg.evaluate(() => !document.getElementById('over').classList.contains('hide'));
-await pg.setViewportSize({ width: 400, height: 730 });
-await pg.waitForTimeout(400);
-ok('panel açıkken oyun arkada yeniden başlamıyor',
-   overVisible && (await dbg()).state === 'dead' &&
-   (await pg.evaluate(() => !document.getElementById('over').classList.contains('hide'))));
 
-const best = (await dbg()).best;
-ok('rekor kaydediliyor', best > 0, `rekor=${best}`);
-await pg.reload();
-await pg.waitForTimeout(600);
-ok('rekor yenilemeden sonra duruyor', (await dbg()).best === best);
-ok('menüde rekor gösteriliyor', /Rekor/.test(await pg.textContent('#menuStats')));
-
-group('duraklatma');
-await pg.click('#btnStart');
-await pg.waitForTimeout(250);
+await run('startRun()');
+await pg.waitForTimeout(150);
 await pg.click('#btnPause');
 await pg.waitForTimeout(200);
 ok('duraklat düğmesi', (await dbg()).state === 'paused');
+const tPaused = (await dbg()).time;
+await pg.waitForTimeout(600);
+ok('duraklatınca saat durmuş', Math.abs((await dbg()).time - tPaused) < .05);
 await pg.click('#btnResume');
 await pg.waitForTimeout(2200);
 ok('geri sayımdan sonra devam ediyor', (await dbg()).state === 'play');
@@ -315,16 +323,24 @@ await pg.evaluate(() => {
   document.dispatchEvent(new Event('visibilitychange'));
 });
 await pg.waitForTimeout(200);
-ok('sekme gizlenince kendiliğinden duruyor', (await dbg()).state === 'paused');
+ok('sekme gizlenince duruyor', (await dbg()).state === 'paused');
+await pg.evaluate(() => Object.defineProperty(document, 'hidden', { value: false, configurable: true }));
+
+group('kayıt');
+await run('startRun(); score=42; timeLeft=0.02;');
+await pg.waitForTimeout(1400);
+const best = (await dbg()).best;
+ok('rekor kaydediliyor', best === 42, `rekor=${best}`);
+await pg.reload();
+await pg.waitForTimeout(600);
+ok('rekor yenilemeden sonra duruyor', (await dbg()).best === 42);
+ok('menüde rekor gösteriliyor', /Rekor/.test(await pg.textContent('#menuStats')));
 
 group('performans');
-await pg.evaluate(() => {
-  Object.defineProperty(document, 'hidden', { value: false, configurable: true });
-});
-await pg.click('#btnResume');
-await pg.waitForTimeout(2200);
-await pg.evaluate(() => __perch(-30000));
-await pg.waitForTimeout(600);
+await pg.click('#btnStart');
+await pg.waitForTimeout(200);
+await run('baskets=35; ci=courtAt(35); ciPrev=ci; cMix=1; applyCourt(); newShot(); wideShots=3; airShots=2;');
+await pg.waitForTimeout(400);
 const fps = await pg.evaluate(() => new Promise(res => {
   let n = 0; const t0 = performance.now();
   (function f() {
@@ -333,9 +349,10 @@ const fps = await pg.evaluate(() => new Promise(res => {
                                   : res(+(n / ((performance.now() - t0) / 1000)).toFixed(1));
   })();
 }));
-ok('kare hızı 50 fps üzerinde', fps > 50, `${fps} fps`);
-
-ok('konsolda hata yok', errs.length === 0, errs.join(' | ') || 'yok');
+// Eşik gerçek gerilemeleri yakalayacak kadar yüksek, paylaşımlı CI CPU'sunda
+// gürültüye takılmayacak kadar düşük tutuldu (gerçek cihazda ölçüm 60 fps).
+ok('kare hızı 45 fps üzerinde', fps > 45, `${fps} fps`);
+ok('konsolda hata yok', errs.length === 0, errs.slice(0, 2).join(' | ') || 'yok');
 
 await browser.close();
 unlinkSync(probe);

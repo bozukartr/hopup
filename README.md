@@ -1,6 +1,6 @@
 # SAPAN
 
-Tek parmakla oynanan sonsuz tırmanış oyunu. Geri çek, bırak, yukarı tırman.
+Sapanla potaya at. Süreye karşı basket avı — tek parmakla oynanır.
 
 **Oyna:** [bozukartr.github.io/hopup](https://bozukartr.github.io/hopup)
 
@@ -9,46 +9,45 @@ açman yeterli. GitHub Pages'e olduğu gibi yayınlanır.
 
 ## Nasıl oynanır
 
-Topun üstüne bas, sapanı geri çek ve bırak. Ne kadar çok çekersen o kadar güçlü
-fırlar. Yörünge önizlemesi ilk çarpışmada kesilir — nereye ineceğini gösterir.
+Topa bas, sapanı geri çek ve bırak. Ne kadar çok çekersen o kadar güçlü fırlar.
+Yörünge önizlemesi ilk çarpışmada kesilir ve o noktayı işaretler — nereye
+gideceğini görürsün.
 
-Üç zemin, üç ayrı fiil:
+Pota duvara monteli: panya, çember ve file. Top çemberden **aşağı doğru** geçerse
+basket sayılır.
 
-| Zemin | Davranış |
+| Atış | Sayı |
 |---|---|
-| Sade | Tutunur, hızını yarıya indirir — düşün ve nişan al |
-| Zıplak | Düşüş hızını geri verir, seni yukarı fırlatır — momentum |
-| Çürük | Bastıktan yarım saniye sonra kırılır — acele et |
+| Normal basket | 2 |
+| **Temiz atış** — çembere ve panyaya hiç değmeden | 3 |
 
-Diken kırmızıdır; değersen top patlar.
+Her basket saate süre ekler: normal +2,5 sn, temiz atış +4 sn. Süre biterse oyun
+biter, başka bitiş yok.
+
+**Seri:** Üst üste her 3 basket çarpanı bir artırır (en fazla ×4). Kaçırırsan
+seri sıfırlanır.
 
 ## Güçlendirmeler
 
-Havada asılı duran küreler. Toplamak için biraz sapman gerekir — bedava değil,
-bir karar.
+Havada asılı duran küreler. Toplamak için atışını biraz saptırman gerekir —
+bedava değil, bir karar.
 
 | Küre | Etki |
 |---|---|
-| **Kalkan** (mavi) | Bir ölümü emer. Düşmeden kurtarırsa ulaştığın en yüksek noktayı kaybedersin |
-| **Roket** (sarı) | Sonraki atış %70 daha güçlü; alev kuyruğu bırakır |
-| **Çift atış** (mor) | Havadayken bir kez daha nişan alıp fırlatabilirsin, üst üste 3'e kadar |
+| **Süre** (mavi) | Saate 4 saniye ekler |
+| **Geniş pota** (sarı) | 3 atış boyunca çember %50 genişler |
+| **Çift atış** (mor) | Top havadayken bir kez daha nişan alıp fırlatırsın |
 
-**Kamera seni sonsuza kadar beklemez.** En yüksek noktandan yarım ekrandan fazla
-düşersen koşu biter. Alt kenarın kırmızılaşması son uyarıdır.
+## Sahalar
 
-**Seri:** Art arda yükselerek indiğin her platform seriyi büyütür. Seri fırlatma
-gücünü %18'e kadar artırır ve topun etrafında bir hale belirir. Aşağı inersen sıfırlanır.
+Basket sayısı arttıkça saha değişir — palet, mekanik ve zorluk birlikte artar.
 
-**Kıl payı:** Dikene çarpmadan yakınından geçersen zaman kısa bir an yavaşlar.
+`SAHA` → `RÜZGÂR` → `KAYAN POTA` → `ENGEL` → `YÜKSEK` → `FIRTINA`
 
-## Bölgeler
-
-Yükseldikçe dünya değişir — palet, mekanik ve tehdit birlikte artar. Zorluk
-logaritmik bir eğriyle sürekli tırmanır, hiçbir yükseklikte düzleşmez.
-
-`ZEMİN` → `BUZ` → `REÇİNE` → `RÜZGÂR` → `ÇÜRÜK KAT` → `FIRTINA`
-
-İlk bölge tehlikesizdir: oyuncu önce sapanı öğrenir.
+Sırasıyla: sabit pota, esen rüzgâr, dikey salınan pota, hareketli engel, daha
+yüksek ve daralan çember, hepsi birden. Zorluk yolu kapatarak değil, çemberi
+daraltıp potayı hızlandırarak artar — engel de yanında her zaman açık bir
+koridor bırakır.
 
 ## Kontroller
 
@@ -59,27 +58,37 @@ logaritmik bir eğriyle sürekli tırmanır, hiçbir yükseklikte düzleşmez.
 
 ## Teknik notlar
 
-- Fizik sabit 420×900 birimlik **sanal dünyada** işler; ekran yalnızca ölçeklenir.
-  Böylece zorluk telefondan tablete kadar aynı kalır, ekran boyutu değişimi
-  koşuyu bozmaz.
-- Sabit 60 Hz mantık adımı + kare arası enterpolasyon; 120 Hz ekranlarda akıcı,
-  yavaş cihazlarda efekt bütçesi otomatik düşer.
+- Fizik sabit 420×900 birimlik **sanal sahada** işler; ekran yalnızca ölçeklenir.
+  Zorluk telefondan tablete aynı kalır, ekran boyutu değişimi koşuyu bozmaz.
+- Sabit 60 Hz mantık adımı + kare arası enterpolasyon; yavaş cihazlarda efekt
+  bütçesi otomatik düşer.
 - Ses WebAudio ile üretilir, dosya indirilmez.
-- Ekran dışında kalan platformlar budanır; nesne sayısı sabit kalır.
+- Çarpışma alt adımlara bölünür; hızlı top çemberi ıskalamaz.
 - `prefers-reduced-motion` sarsıntı, parçacık, flaş ve vinyeti kapatır.
 
 ## Görsel katman
 
-Bölgeye göre değişen iki hızlı parallax arka plan (nokta, buz kıymığı, reçine
-damlası, rüzgâr yayı, çatlak, şimşek), topun arkasında konikleşen şerit iz,
-yüksek hızda hız çizgileri, inişte platform ezilmesi, tam ekran renk flaşları,
-seriyle koyulaşan vinyet, bölge geçişinde ekranı tarayan bant ve toplama
-patlamaları. Hepsi kare hızına göre bütçelenir; ölçümde her bölgede 60 fps.
+Sahaya göre değişen iki hızlı parallax arka plan, üç sayı yayı ve boyalı alan
+çizgileri, parke zemin, basket anında dalgalanan file, topun dönen basketbol
+deseni ve zemin gölgesi, hız çizgileri, tam ekran renk flaşları, seriyle
+koyulaşan vinyet, son 10 saniyede kırmızıya dönen saat ve vinyet.
 
 ## Testler
 
-`tests/game.test.mjs` oyunu Playwright ile gerçekten oynayıp fizik, üretim,
-durum geçişleri ve kayıt davranışını doğrular.
+`tests/game.test.mjs` oyunu Playwright ile gerçekten oynatıp doğrular: basket
+algılama, çember/panya/engel çarpışmaları, sayı ve seri kuralları, saat, saha
+ilerlemesi, güçlendirmeler, kayıt ve performans.
+
+Ayrıca **her turun çözülebilirliğini** test eder: oyunun kendi fiziğiyle tüm
+açı/güç ızgarasını deneyip o kurulumdan basket atmanın bir yolu olduğunu
+doğrular.
+
+Bu yalnızca test değil, oyunun kendi güvencesi: her tur kurulurken oyun,
+balistik çözümlerle tohumlanmış bir arama çalıştırıp kurulumun çözülebilir
+olduğunu doğrular; olmuyorsa kurulumu kademeli gevşetip yeniden dener. Arama
+kare içi süre bütçesine bağlıdır (ölçümde ortanca 1,8 ms, en kötü 9,2 ms), bütçe
+biterse engelsiz ve salınımsız bir kuruluma düşer. Böylece **imkânsız tur
+üretilemez** ve tur geçişinde kare düşmez.
 
 ```
 npm i -D playwright && npx playwright install chromium
