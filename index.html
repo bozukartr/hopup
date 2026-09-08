@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="SAPAN">
-<title>SAPAN</title>
+<title>Hopup · Sapan Basket</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -142,6 +142,43 @@
   @media (prefers-reduced-motion:reduce){
     button,.sheet,.tst,#count span,.badge,#timebar.low{transition:none;animation:none}
   }
+
+  /* Arcade shell: compact, thumb-friendly and independent of court palette. */
+  .sheet{overflow-y:auto;gap:20px}
+  #menu{background:radial-gradient(ellipse at 80% 25%,#284651 0,transparent 55%),#101f2b;color:#f7f4ec;gap:16px;justify-content:safe center}
+  .menu-top{width:100%;max-width:360px;display:flex;justify-content:space-between;align-items:center}
+  .eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;color:#9fb5be}
+  .menu-top .hbtn{background:#ffffff12;color:#faf5e9;width:44px;height:44px}
+  #menu .mark b{font-size:clamp(52px,15vw,76px);letter-spacing:-.065em;color:#faf5e9}
+  #menu .mark b em{color:#ff9860;font-style:normal}
+  #menu .mark span{font-size:13px;opacity:.7;letter-spacing:.04em}
+  .hero{width:min(100%,330px);height:clamp(145px,25vh,230px);overflow:visible}
+  .hero-ball{transform-origin:142px 139px;animation:hero-hop 2.8s ease-in-out infinite}
+  @keyframes hero-hop{0%,100%{transform:translate(-26px,18px) rotate(-18deg)}50%{transform:translate(28px,-34px) rotate(45deg)}}
+  .menu-actions{width:100%;max-width:340px;display:grid;gap:10px}
+  #btnStart{background:#ff9559;color:#162330;border-radius:19px;padding:18px;box-shadow:0 6px 0 #b75d32;font-size:19px}
+  #btnPractice{background:#ffffff0d;color:#eaf1f1;border:1px solid #ffffff20;border-radius:16px;padding:13px;font-size:14px}
+  .menu-hint{color:#b1c3cb;font-size:12px;line-height:1.65;max-width:300px}
+  #menuStats{width:100%;max-width:340px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat-card{background:#ffffff08;border:1px solid #ffffff12;border-radius:15px;padding:12px 5px}
+  .stat-card strong{display:block;font-size:22px;color:#f9f3e6;font-variant-numeric:tabular-nums}
+  .stat-card small{font-size:10px;color:#9fb5be}
+  #journey{position:fixed;bottom:calc(var(--safe-b) + 12px);left:50%;transform:translateX(-50%);width:min(82vw,330px);z-index:5;pointer-events:none;color:#f3eee3;text-align:center}
+  #journey.hide{display:none}
+  #courtLabel{font-size:10px;letter-spacing:.16em;color:#aec5ca}
+  #goalLabel{font-size:12px;margin-top:4px}
+  .progress-track{height:3px;background:#ffffff20;margin:8px auto 0;border-radius:8px;overflow:hidden}
+  #goalFill{height:100%;background:#66ddbd;transform-origin:left;transition:transform .25s}
+  #hud{align-items:flex-start}
+  #scoreWrap{padding:9px 22px 10px;border-radius:0 0 23px 23px;background:rgba(var(--paper-rgb),.88);box-shadow:0 8px 24px #15223008;min-width:115px}
+  #score{font-size:42px}
+  .hbtn{width:44px;height:44px}
+  .tally{gap:16px;flex-wrap:wrap;justify-content:center}
+  .tally div strong{font-size:40px}
+  #runDetails{font-size:13px;line-height:1.8;opacity:.7;max-width:320px}
+  @media(max-height:640px){#menu{gap:10px;padding-top:12px;padding-bottom:12px}.hero{height:110px}.mark span{margin-top:6px}.stat-card{padding:7px 4px}#menu .mark b{font-size:48px}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
 </style>
 </head>
 <body>
@@ -162,24 +199,30 @@
 </div>
 <div id="timebar" class="hide"><div id="timefill"></div></div>
 
-<div id="toast"></div>
+<div id="journey" class="hide"><div id="courtLabel"></div><div id="goalLabel"></div><div class="progress-track"><div id="goalFill"></div></div></div>
+<div id="toast" aria-live="polite"></div>
 <div id="count" class="hide"></div>
 
 <div class="sheet" id="menu">
-  <div class="mark">
-    <b>SAPAN</b>
-    <span>Geri çek, bırak, potayı bul</span>
-  </div>
-  <div class="keys">
-    <div class="key"><i class="hoopy"></i>Pota<i>süre bitmeden at</i></div>
-    <div class="key"><i class="dot"></i>Temiz atış<i>çembere değmezse 3 sayı</i></div>
-    <div class="key"><i class="bar"></i>Engel<i>yolunu keser</i></div>
-    <div class="key"><i class="dot t"></i>Süre<i>+4 saniye</i></div>
-    <div class="key"><i class="dot w"></i>Geniş pota<i>çember büyür</i></div>
-    <div class="key"><i class="dot d"></i>Çift atış<i>havada düzelt</i></div>
-  </div>
-  <div class="row"><button id="btnStart">Oyna</button></div>
-  <div class="row" id="menuStats" style="font-size:13px;opacity:.5"></div>
+  <div class="menu-top"><span class="eyebrow">TEK PARMAK · TAM İSABET</span><button class="hbtn" id="btnMenuSound" aria-label="Sesi kapat">♪</button></div>
+  <div class="mark"><b>hop<em>up.</em></b><span>Sapanı çek. Ritmini bul.</span></div>
+  <svg class="hero" viewBox="0 0 340 220" aria-hidden="true">
+    <defs><linearGradient id="courtPaint" x2="0" y2="1"><stop stop-color="#345460"/><stop offset="1" stop-color="#182e3c"/></linearGradient><radialGradient id="ballPaint" cx="30%" cy="25%"><stop stop-color="#ffc17a"/><stop offset=".65" stop-color="#f58a43"/><stop offset="1" stop-color="#c64b25"/></radialGradient></defs>
+    <ellipse cx="170" cy="197" rx="155" ry="19" fill="#091723" opacity=".5"/>
+    <path d="M25 172 173 111 322 176 174 218Z" fill="url(#courtPaint)" stroke="#45616a"/>
+    <path d="m64 175 109-45 110 47-110 30Z M113 181q60-43 119 0" fill="none" stroke="#718e93" opacity=".45"/>
+    <path d="M283 167V42" stroke="#66828b" stroke-width="7"/>
+    <rect x="235" y="22" width="77" height="65" rx="9" fill="#cce6e8" fill-opacity=".16" stroke="#ccdedb" stroke-width="3"/>
+    <path d="M254 70V45h34v25" stroke="#eef5ed" fill="none" stroke-width="3"/>
+    <path d="m243 83 9 35h30l10-35m-42 10h36m-32 13h29m-24-23 6 35m13-35-6 35" fill="none" stroke="#d5e4dd" stroke-width="1.6"/>
+    <ellipse cx="267" cy="82" rx="27" ry="6" fill="none" stroke="#ff9962" stroke-width="5"/>
+    <path d="M82 155Q122 6 240 67" fill="none" stroke="#7edac2" stroke-width="2" stroke-dasharray="3 10" opacity=".6"/>
+    <g class="hero-ball"><circle cx="142" cy="139" r="30" fill="url(#ballPaint)" stroke="#ffb77b"/><g stroke="#76371f" stroke-width="2" fill="none"><path d="M112 139h60m-30-30v60m-22-51q38 21 0 43m44-43q-38 21 0 43"/></g><path d="M125 122q8-9 17-7" stroke="#ffe0a3" stroke-width="3" stroke-linecap="round" fill="none"/></g>
+    <path d="m76 75 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z" fill="#7edac2"/>
+  </svg>
+  <div id="menuStats"></div>
+  <div class="menu-actions"><button id="btnStart">Sahaya çık ↗</button><button id="btnPractice">Antrenman · Süresiz oyna</button></div>
+  <p class="menu-hint">Ekranın herhangi bir yerinden geri çek ve bırak.<br>Temiz basket +3 sayı. Her basket ek süre.</p>
 </div>
 
 <div class="sheet hide" id="pause">
@@ -198,6 +241,7 @@
     <div class="alt"><small>Basket</small><strong id="bk">0</strong></div>
     <div class="alt"><small>En iyi seri</small><strong id="bc">0</strong></div>
   </div>
+  <div id="runDetails"></div>
   <div class="row"><button id="btnAgain">Yeniden dene</button></div>
   <div class="row"><button class="ghost" id="btnMenu">Menü</button></div>
 </div>
@@ -250,6 +294,7 @@ let seed = 1;
 function srand(s){ seed=(s>>>0)||1; }
 function rand(){ seed^=seed<<13; seed>>>=0; seed^=seed>>17; seed^=seed<<5; seed>>>=0; return seed/4294967296; }
 const rnd=(a,b)=>a+rand()*(b-a);
+const fxrnd=(a,b)=>a+Math.random()*(b-a);
 
 /* ================= kayıt ================= */
 const KEY='sapan.hoop.v1';
@@ -359,6 +404,7 @@ let aim=null, aimId=null, buffered=false;
 let scored=false, hitRim=false, hitBoard=false, endT=0, flightT=0;
 let wideShots=0, airShots=0;
 let newRecord=false, overTimer=0, countTimer=0, urgentAt=99;
+let mode='arcade', shots=0, swishes=0, probing=false, trail=[];
 let flashC=null, flashA=0, sweep=0, vig=0;
 
 const el = id=>document.getElementById(id);
@@ -391,21 +437,21 @@ function toast(text, big, ms){
   while(elToast.children.length>3) elToast.firstChild.remove();
 }
 function dust(x,y,n,c,spread){
-  n=Math.round(n*quality); if(n<=0) return;
-  for(let i=0;i<n;i++) parts.push({x,y,vx:rnd(-spread,spread),vy:rnd(-2.4,-.2),
-    life:1,dec:rnd(.02,.045),s:rnd(2,4.6),c});
+  n=reduceMotion?0:Math.round(n*quality); if(n<=0) return;
+  for(let i=0;i<n;i++) parts.push({x,y,vx:fxrnd(-spread,spread),vy:fxrnd(-2.4,-.2),
+    life:1,dec:fxrnd(.02,.045),s:fxrnd(2,4.6),c});
   if(parts.length>340) parts.splice(0, parts.length-340);
 }
 function burst(x,y,c,n){
-  n=Math.round(n*quality); if(n<=0) return;
+  n=reduceMotion?0:Math.round(n*quality); if(n<=0) return;
   for(let i=0;i<n;i++){
-    const a=(i/n)*6.283+rand()*.5, sp=rnd(1.8,6.4);
+    const a=(i/n)*6.283+Math.random()*.5, sp=fxrnd(1.8,6.4);
     parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-.6,
-      life:1,dec:rnd(.016,.034),s:rnd(2,5),c,g:.12});
+      life:1,dec:fxrnd(.016,.034),s:fxrnd(2,5),c,g:.12});
   }
   if(parts.length>360) parts.splice(0, parts.length-360);
 }
-function ring(x,y,c){ if(quality>.35) rings.push({x,y,r:8,life:1,c}); }
+function ring(x,y,c){ if(!reduceMotion && quality>.35) rings.push({x,y,r:8,life:1,c}); }
 function floater(x,y,text,c,big){ floats.push({x,y,text,c,life:1,big:!!big}); if(floats.length>8) floats.shift(); }
 function addShake(v){ if(!reduceMotion) shake=Math.min(16, shake+v); }
 function flash(c,a){ if(reduceMotion) return; flashC=c; flashA=Math.max(flashA,a); }
@@ -452,6 +498,7 @@ function probeShot(vx0, vy0){
   const sx=ball.x, sy=ball.y, svx=ball.vx, svy=ball.vy;
   const bsave = bars.map(b=>b.x);
   let made=false, t=tick;
+  probing=true;
   ball.vx=vx0; ball.vy=vy0; ball.y-=2;
   for(let f=0; f<240 && !made; f++){
     t++;
@@ -478,6 +525,7 @@ function probeShot(vx0, vy0){
   }
   ball.x=sx; ball.y=sy; ball.vx=svx; ball.vy=svy;
   bars.forEach((b,i)=>b.x=bsave[i]);
+  probing=false;
   return made;
 }
 /* (dx, dy yukarı) hedefine v hızıyla giden balistik açılar — 0, 1 veya 2 çözüm */
@@ -598,12 +646,13 @@ function newShot(){
   }
 
   scored=false; hitRim=false; hitBoard=false; flightT=0;
-  phase='aim'; aim=null; buffered=false;
+  phase='aim'; aim=null; buffered=false; trail.length=0;
 }
 
 function resetRun(){
   parts.length=0; rings.length=0; floats.length=0; nets.length=0;
   score=0; baskets=0; streak=0; bestStreakRun=0; timeLeft=START_TIME;
+  shots=0; swishes=0; elCombo.classList.remove('on');
   tick=0; shake=0; slow=0; flashA=0; sweep=0; vig=0;
   wideShots=0; airShots=0; urgentAt=99;
   ci=0; ciPrev=0; cMix=1; applyCourt(); syncPower();
@@ -614,9 +663,9 @@ function resetRun(){
 
 /* ================= fizik ================= */
 function wallHit(){
-  if(ball.x-BR < PL){ ball.x=PL+BR; if(ball.vx<-3){ dust(PL+BR,ball.y,3,ink,1.6); Snd.wall(); }
+  if(ball.x-BR < PL){ ball.x=PL+BR; if(ball.vx<-3 && !probing){ dust(PL+BR,ball.y,3,ink,1.6); Snd.wall(); }
     ball.vx=Math.abs(ball.vx)*.68; }
-  else if(ball.x+BR > PR){ ball.x=PR-BR; if(ball.vx>3){ dust(PR-BR,ball.y,3,ink,1.6); Snd.wall(); }
+  else if(ball.x+BR > PR){ ball.x=PR-BR; if(ball.vx>3 && !probing){ dust(PR-BR,ball.y,3,ink,1.6); Snd.wall(); }
     ball.vx=-Math.abs(ball.vx)*.68; }
 }
 
@@ -624,11 +673,18 @@ function rectHit(rx, ry, rw, rh, bounce){
   const cx=clamp(ball.x, rx, rx+rw), cy=clamp(ball.y, ry, ry+rh);
   const dx=ball.x-cx, dy=ball.y-cy;
   if(dx*dx+dy*dy > BR*BR) return false;
-  // en sığ eksende dışarı it
-  const ox = ball.x < rx+rw/2 ? (rx-BR)-ball.x : (rx+rw+BR)-ball.x;
-  const oy = ball.y < ry+rh/2 ? (ry-BR)-ball.y : (ry+rh+BR)-ball.y;
-  if(Math.abs(ox) < Math.abs(oy)){ ball.x += ox; ball.vx = -ball.vx*bounce; }
-  else { ball.y += oy; ball.vy = -ball.vy*bounce; }
+  const d=Math.hypot(dx,dy);
+  let nx,ny,depth;
+  if(d>0){ nx=dx/d; ny=dy/d; depth=BR-d; }
+  else{
+    const faces=[{v:ball.x-rx,x:-1,y:0},{v:rx+rw-ball.x,x:1,y:0},
+      {v:ball.y-ry,x:0,y:-1},{v:ry+rh-ball.y,x:0,y:1}];
+    const face=faces.reduce((a,b)=>a.v<b.v?a:b);
+    nx=face.x;ny=face.y;depth=BR+face.v;
+  }
+  ball.x+=nx*depth; ball.y+=ny*depth;
+  const vn=ball.vx*nx+ball.vy*ny;
+  if(vn<0){ball.vx-=(1+bounce)*vn*nx;ball.vy-=(1+bounce)*vn*ny;}
   return true;
 }
 
@@ -638,8 +694,10 @@ function circleHit(cx, cy, cr, bounce){
   const nx=dx/d, ny=dy/d;
   ball.x = cx + nx*rr; ball.y = cy + ny*rr;
   const vn = ball.vx*nx + ball.vy*ny;
-  ball.vx = (ball.vx - 2*vn*nx)*bounce;
-  ball.vy = (ball.vy - 2*vn*ny)*bounce;
+  if(vn<0){
+    ball.vx -= (1+bounce)*vn*nx;
+    ball.vy -= (1+bounce)*vn*ny;
+  }
   return true;
 }
 
@@ -648,6 +706,7 @@ function madeBasket(){
   if(scored) return;
   scored = true;
   const swish = !hitRim && !hitBoard;
+  if(swish) swishes++;
   baskets++;
   streak++;
   bestStreakRun = Math.max(bestStreakRun, streak);
@@ -697,6 +756,7 @@ function endShot(made){
 /* ================= adım ================= */
 function step(){
   tick++;
+  if(ball) ball.squash=(ball.squash||0)*.76;
   shake *= reduceMotion ? .55 : .86;
   if(slow>0) slow--;
   if(flashA>0){ flashA*=.84; if(flashA<.01) flashA=0; }
@@ -706,17 +766,18 @@ function step(){
   for(const b of bars){ b.x = b.bx + Math.sin(tick*b.spd + b.ph)*b.amp; }
   for(let i=nets.length-1;i>=0;i--){ nets[i].t -= .045; if(nets[i].t<=0) nets.splice(i,1); }
 
-  if(state==='play'){
+  if(state==='play' && mode==='arcade'){
     timeLeft -= STEP/1000;
     if(timeLeft <= 10 && timeLeft > 0){
       const s = Math.ceil(timeLeft);
       if(s < urgentAt){ urgentAt = s; if(s<=5) Snd.urgent(); }
     }
-    if(timeLeft <= 0){ timeLeft = 0; gameOver(); return; }
+    if(timeLeft <= 0){ timeLeft = 0; if(phase!=='fly'){ gameOver(); return; } }
   }
 
   if(ball && (phase==='fly' || phase==='end')){
     ball.rx = ball.x; ball.ry = ball.y;
+    if(!reduceMotion){ trail.push({x:ball.x,y:ball.y}); if(trail.length>10) trail.shift(); }
     flightT += STEP/1000;
     ball.vy += G;
     ball.vx += windNow();
@@ -750,7 +811,8 @@ function step(){
       // güçlendirme küreleri
       for(const o of orbs){
         if(o.taken) continue;
-        const dx=ball.x-o.x, dy=ball.y-o.y;
+        const oy=o.y+(reduceMotion?0:Math.sin(tick*.045+o.ph)*5);
+        const dx=ball.x-o.x, dy=ball.y-oy;
         if(dx*dx+dy*dy < (BR+15)*(BR+15)) grab(o);
       }
 
@@ -759,7 +821,7 @@ function step(){
         ball.y = FLOOR - BR;
         const impact = ball.vy;
         ball.vy = -Math.abs(ball.vy)*.42; ball.vx *= .82;
-        if(impact > 2){ Snd.dribble(); dust(ball.x, FLOOR, 5, GREY, 2.2); addShake(Math.min(2.5, impact*.1)); }
+        if(impact > 2){ ball.squash=Math.min(.28,impact*.012); Snd.dribble(); dust(ball.x, FLOOR, 5, GREY, 2.2); addShake(Math.min(2.5, impact*.1)); }
         if(Math.abs(ball.vy) < 1.6){ ball.vy = 0; ball.y = FLOOR - BR; }
         if(phase==='fly') endShot(false);
       }
@@ -787,11 +849,13 @@ function gameOver(){
   Snd.buzzer(); buzz([60,40,80]); addShake(9); flash(CORAL,.3);
   aim=null; aimId=null; buffered=false;
   elCombo.classList.remove('on');
-  newRecord = score > save.best;
+  newRecord = mode==='arcade' && score > save.best;
+  if(mode==='arcade'){
   save.runs++;
   save.best = Math.max(save.best, score);
   save.bestStreak = Math.max(save.bestStreak, bestStreakRun);
   save.bestBaskets = Math.max(save.bestBaskets, baskets);
+  }
   persist();
   if(newRecord){
     setTimeout(()=>Snd.record(), 300);
@@ -806,9 +870,10 @@ function showOver(){
   el('sc').textContent = score;
   el('bs').textContent = save.best;
   el('bk').textContent = baskets;
-  el('bc').textContent = save.bestStreak;
+  el('bc').textContent = bestStreakRun;
+  el('runDetails').textContent = shots+' atış · '+swishes+' temiz basket · %'+(shots?Math.round(baskets/shots*100):0)+' isabet';
   el('overTitle').textContent = 'Süre doldu';
-  el('overSub').textContent = baskets===0 ? 'Bir basket bile yok — çemberi bul.'
+  el('overSub').textContent = baskets===0 ? 'Bir sonraki atış senin. Yayı takip ederek tekrar dene.'
     : bestStreakRun>=3 ? 'Bu koşudaki en iyi seri: '+bestStreakRun+' basket'
     : baskets+' basket attın.';
   el('recBadge').classList.toggle('hide', !newRecord);
@@ -822,10 +887,11 @@ function setState(s){
   elPause.classList.toggle('hide', s!=='paused');
   elOver.classList.toggle('hide', s!=='over');
   elHud.classList.toggle('hide', s==='menu');
-  elBar.classList.toggle('hide', s==='menu');
+  elBar.classList.toggle('hide', s==='menu' || mode==='practice');
+  el('journey').classList.toggle('hide',s!=='play');
   if(s!=='count'){ clearTimeout(countTimer); elCount.classList.add('hide'); }
 }
-function startRun(){ Snd.resume(); resetRun(); setState('play'); }
+function startRun(nextMode='arcade'){ mode=nextMode; Snd.resume(); resetRun(); shownTime=-1; setState('play'); }
 function pauseGame(){
   if(state!=='play' && state!=='count') return;
   aim=null; aimId=null; buffered=false;
@@ -891,7 +957,7 @@ function release(e){
       burst(ball.x, ball.y, VIOLET, 14); ring(ball.x, ball.y, VIOLET);
       Snd.airshot(); addShake(3); syncPower();
     }else{
-      phase='fly'; flightT=0; ball.y-=2;
+      shots++; phase='fly'; flightT=0; ball.y-=2; ball.rx=ball.x; ball.ry=ball.y;
       dust(ball.x, FLOOR, 6, GREY, 2.6);
       if(!save.taught){ save.taught=true; persist(); }
     }
@@ -900,7 +966,12 @@ function release(e){
   aim=null;
 }
 cvs.addEventListener('pointerup', release);
-cvs.addEventListener('pointercancel', release);
+function cancelAim(e){
+  if(e && aimId!==null && e.pointerId!==aimId) return;
+  aim=null; aimId=null; buffered=false;
+}
+cvs.addEventListener('pointercancel', cancelAim);
+cvs.addEventListener('lostpointercapture', cancelAim);
 addEventListener('keydown', e=>{
   if(e.key==='Escape'||e.key==='p'||e.key==='P'){
     if(state==='play'||state==='count') pauseGame(); else if(state==='paused') resumeGame();
@@ -908,25 +979,27 @@ addEventListener('keydown', e=>{
 });
 
 /* ================= düğmeler ================= */
-el('btnStart').onclick = startRun;
-el('btnAgain').onclick = startRun;
+el('btnStart').onclick = ()=>startRun();
+el('btnPractice').onclick = ()=>startRun('practice');
+el('btnAgain').onclick = ()=>startRun(mode);
 el('btnResume').onclick = resumeGame;
 el('btnPause').onclick = pauseGame;
 const toMenu = ()=>{ ci=0; ciPrev=0; cMix=1; applyCourt(); setState('menu'); refreshMenu(); };
 el('btnQuit').onclick = toMenu;
 el('btnMenu').onclick = toMenu;
-el('btnSound').onclick = ()=>{
+el('btnMenuSound').onclick = el('btnSound').onclick = ()=>{
   save.sound=!save.sound; persist(); syncSound();
   if(save.sound){ Snd.resume(); Snd.tick(); }
 };
 function syncSound(){
   el('sndIcon').textContent = save.sound ? '♪' : '✕';
+  el('btnMenuSound').textContent=save.sound?'♪':'✕';
+  el('btnMenuSound').setAttribute('aria-label',save.sound?'Sesi kapat':'Sesi aç');
+  for(const id of ['btnSound','btnMenuSound']) el(id).setAttribute('aria-pressed',String(save.sound));
   el('btnSound').setAttribute('aria-label', save.sound ? 'Sesi kapat' : 'Sesi aç');
 }
 function refreshMenu(){
-  el('menuStats').textContent = save.best
-    ? 'Rekor ' + save.best + ' sayı  ·  En iyi seri ' + save.bestStreak + '  ·  ' + save.runs + ' koşu'
-    : '';
+  el('menuStats').innerHTML = [[save.best,'REKOR'],[save.bestStreak,'EN İYİ SERİ'],[save.runs,'KOŞU']].map(([n,t])=>'<div class="stat-card"><strong>'+Number(n||0)+'</strong><small>'+t+'</small></div>').join('');
 }
 syncSound(); refreshMenu();
 
@@ -951,7 +1024,7 @@ function drawMotif(m,x,y,r,rot){
   ctx.restore();
 }
 function drawParallax(){
-  if(quality<.5) return;
+  if(reduceMotion || quality<.5) return;
   const m = court().motif;
   ctx.strokeStyle=ink; ctx.fillStyle=ink; ctx.lineCap='round';
   for(const L of [{n:5,s:1.6,a:.032,d:.10},{n:7,s:1.0,a:.05,d:.22}]){
@@ -1022,14 +1095,16 @@ function drawBall(bx, by){
     ctx.beginPath(); ctx.arc(bx, by, BR+13, tick*.03, tick*.03+6.283); ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha=1;
   }
-  const st = clamp(sp/36, 0, .3);
+  const squash=reduceMotion?0:(ball.squash||0);
+  const st = reduceMotion?0:clamp(sp/140, 0, .16);
   const ang = Math.atan2(ball.vy, ball.vx);
-  const spin = tick * .06 * (ball.vx>0?1:-1);
+  const spin = reduceMotion?0:tick * .035 * (ball.vx>0?1:-1);
   ctx.save(); ctx.translate(bx, by);
-  if(phase!=='aim') ctx.rotate(ang);
-  ctx.scale(1+st, 1-st);
-  ctx.rotate(-ang + spin);
-  ctx.fillStyle = '#E8722F';
+  ctx.scale(1+squash,1-squash);
+  ctx.rotate(ang); ctx.scale(1+st,1-st); ctx.rotate(-ang+spin);
+  const skin=ctx.createRadialGradient(-6,-7,2,0,0,BR+2);
+  skin.addColorStop(0,'#ffd394'); skin.addColorStop(.45,'#f7984a'); skin.addColorStop(1,'#c74d24');
+  ctx.fillStyle = skin;
   ctx.beginPath(); ctx.arc(0,0,BR,0,6.3); ctx.fill();
   // basketbol çizgileri
   ctx.strokeStyle = '#2A1508'; ctx.lineWidth = 1.6; ctx.globalAlpha = .8;
@@ -1053,26 +1128,33 @@ function drawAim(bx, by){
   ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-v.x*6, by-v.y*6); ctx.stroke();
   ctx.setLineDash([]); ctx.globalAlpha=1;
 
-  let x=bx, y=by, vx=v.x, vy=v.y;
-  const w=windNow(), hy=hoopY(), bx0=boardX();
-  for(let i=1;i<=54;i++){
-    vy+=G; vx+=w; x+=vx; y+=vy;
-    if(x-BR<PL){ x=PL+BR; vx=Math.abs(vx)*.68; }
-    if(x+BR>PR){ x=PR-BR; vx=-Math.abs(vx)*.68; }
+  const original=ball, savedBars=bars.map(b=>b.x), points=[];
+  ball={x:original.x,y:original.y-(phase==='aim'?2:0),vx:v.x,vy:v.y};
+  probing=true;
+  try{
     let stop=false;
-    if(x+BR>bx0 && x-BR<bx0+BOARDW && y>hy-78 && y<hy+14) stop=true;
-    if(y+BR>=FLOOR) stop=true;
-    for(const b of bars) if(x+BR>b.x && x-BR<b.x+b.w && y+BR>b.y && y-BR<b.y+b.h) stop=true;
-    if(stop){
-      ctx.globalAlpha=.5; ctx.strokeStyle=ink; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(x,y,7,0,6.3); ctx.stroke(); ctx.globalAlpha=1;
-      break;
+    for(let f=1;f<=70 && !stop;f++){
+      const t=tick+f;
+      ball.vy=clamp(ball.vy+G,-MAXV,MAXV);
+      ball.vx=clamp(ball.vx+(court().wind?court().wind*Math.sin(t*.0042):0),-MAXV,MAXV);
+      const hy=hoop.baseY+(hoop.amp?Math.sin(t*hoop.spd+hoop.ph)*hoop.amp:0);
+      for(const b of bars) b.x=b.bx+Math.sin(t*b.spd+b.ph)*b.amp;
+      const n=Math.max(1,Math.ceil(Math.hypot(ball.vx,ball.vy)/4));
+      for(let j=0;j<n;j++){
+        const py=ball.y;ball.x+=ball.vx/n;ball.y+=ball.vy/n;
+        wallHit();
+        const hit=rectHit(boardX(),hy-78,BOARDW,92,.58) || circleHit(tipX(),hy,TIP_R,.62) || bars.some(b=>rectHit(b.x,b.y,b.w,b.h,.5));
+        const made=ball.vy>0 && py<hy && ball.y>=hy && ball.x>Math.min(tipX(),innerX())+5 && ball.x<Math.max(tipX(),innerX())-5;
+        if(hit || made || ball.y+BR>=FLOOR){points.push({x:ball.x,y:ball.y,end:true,made});stop=true;break;}
+      }
+      if(!stop && f%3===0) points.push({x:ball.x,y:ball.y});
     }
-    if(i%3===0){
-      const k=1-i/62;
-      ctx.globalAlpha=.44*k; ctx.fillStyle=ink;
-      ctx.beginPath(); ctx.arc(x,y,Math.max(1.5,3.2*k),0,6.3); ctx.fill();
-    }
+  }finally{ball=original;bars.forEach((b,i)=>b.x=savedBars[i]);probing=false;}
+  for(let i=0;i<points.length;i++){
+    const p=points[i];ctx.globalAlpha=p.end?.75:Math.max(.1,.55-i*.018);
+    ctx.fillStyle=ink;ctx.strokeStyle=p.made?MINT:ink;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.end?8:Math.max(1.5,3-i*.06),0,6.3);
+    if(p.end) ctx.stroke();else ctx.fill();
   }
   ctx.globalAlpha=1;
   ctx.strokeStyle = v.t>.94 ? CORAL : MINT; ctx.lineWidth=3.5;
@@ -1100,7 +1182,7 @@ function drawHand(bx, by){
 
 function drawOrb(o, tf){
   if(o.taken) return;
-  const c=PW[o.type].c, bob=Math.sin(tf*.045+o.ph)*5, y=o.y+bob;
+  const c=PW[o.type].c, bob=reduceMotion?0:Math.sin(tf*.045+o.ph)*5, y=o.y+bob;
   const pulse=.5+.5*Math.sin(tf*.07+o.ph);
   ctx.globalAlpha=.16+pulse*.16; ctx.fillStyle=c;
   ctx.beginPath(); ctx.arc(o.x,y,24+pulse*5,0,6.3); ctx.fill();
@@ -1123,7 +1205,7 @@ function drawOrb(o, tf){
 }
 
 function draw(alpha){
-  const tf = tick + alpha;
+  const tf = tick - (state==='play'?1-alpha:0);
   const sh = shake>.4 ? shake : 0;
   const sx = sh ? (Math.random()*2-1)*sh : 0, sy = sh ? (Math.random()*2-1)*sh : 0;
 
@@ -1132,6 +1214,11 @@ function draw(alpha){
   ctx.setTransform(DPR*S,0,0,DPR*S,(offX+sx)*DPR,(offY+sy)*DPR);
 
   ctx.fillStyle = paper; ctx.fillRect(0,0,VW,VH);
+  const ambient=ctx.createLinearGradient(0,160,VW,FLOOR);
+  ambient.addColorStop(0,'rgba(255,255,255,.35)');ambient.addColorStop(1,'rgba(30,67,76,.1)');
+  ctx.fillStyle=ambient;ctx.fillRect(PL,150,PR-PL,FLOOR-150);
+  ctx.fillStyle=ink;ctx.globalAlpha=.035;ctx.font='700 104px Outfit,system-ui';ctx.textAlign='center';
+  ctx.fillText('HOP',VW/2,330);ctx.fillText('UP.',VW/2,428);ctx.globalAlpha=1;
   drawParallax();
 
   // saha çizgileri — potanın altında üç sayı yayı ve boyalı alan
@@ -1200,9 +1287,16 @@ function draw(alpha){
   if(ball && state!=='menu'){
     const bx = phase==='aim' ? ball.x : lerp(ball.rx, ball.x, alpha);
     const by = phase==='aim' ? ball.y : lerp(ball.ry, ball.y, alpha);
+    if(!reduceMotion && phase!=='aim' && quality>.5){
+      for(let i=0;i<trail.length;i++){
+        ctx.globalAlpha=i/trail.length*.16;ctx.fillStyle=streak>=3?MINT:'#eb8a43';
+        ctx.beginPath();ctx.arc(trail[i].x,trail[i].y,BR*i/trail.length*.7,0,6.3);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
     drawBall(bx, by);
     if(aim) drawAim(bx, by);
-    else if(!save.taught && phase==='aim' && state==='play') drawHand(bx, by);
+    else if(!save.taught && !reduceMotion && phase==='aim' && state==='play') drawHand(bx, by);
   }
 
   for(const q of floats){
@@ -1222,7 +1316,7 @@ function draw(alpha){
   }
 
   const vigT = Math.max(Math.min(streak,9)/9*.42,
-                        state==='play' && timeLeft<10 ? (1-timeLeft/10)*.55 : 0);
+                        state==='play' && mode==='arcade' && timeLeft<10 ? (1-timeLeft/10)*.55 : 0);
   vig += (vigT-vig)*.08;
   if(vig>.02 && !reduceMotion){
     const g=ctx.createRadialGradient(VW/2,VH*.5,VH*.24,VW/2,VH*.5,VH*.78);
@@ -1265,12 +1359,21 @@ function loop(now){
   const secs = Math.max(0, Math.ceil(timeLeft));
   if(shownTime!==secs){
     shownTime=secs;
-    elSec.textContent = secs + '"';
-    elSec.classList.toggle('low', secs<=10);
-    elBar.classList.toggle('low', secs<=10);
+    elSec.textContent = mode==='practice' ? 'ANTRENMAN' : secs===0 ? 'SON ATIŞ' : secs + '"';
+    elSec.classList.toggle('low', mode==='arcade' && secs<=10);
+    elBar.classList.toggle('low', mode==='arcade' && secs<=10);
   }
   elFill.style.transform = 'scaleX('+clamp(timeLeft/START_TIME,0,1).toFixed(4)+')';
 
+  const next=COURTS[ci+1], start=COURTS[ci].from;
+  const goal=next ? next.from : start+10;
+  const journeyKey=mode+ci+':'+baskets+':'+streak;
+  if(el('journey').dataset.key!==journeyKey){
+    el('journey').dataset.key=journeyKey;
+    el('courtLabel').textContent=(mode==='practice'?'ANTRENMAN · ':'')+court().n;
+    el('goalLabel').textContent=next ? (next.from-baskets)+' basket sonra '+next.n.toLocaleLowerCase('tr') : 'Fırtınadasın · Serini büyüt!';
+    el('goalFill').style.transform='scaleX('+clamp((baskets-start)/(goal-start),0,1)+')';
+  }
   draw(active ? clamp(acc/STEP,0,1) : 0);
 }
 

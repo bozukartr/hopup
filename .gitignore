@@ -1,2 +1,4 @@
 node_modules/
 tests/.probe.html
+
+tests/*.png
