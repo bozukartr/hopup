@@ -144,7 +144,8 @@
   }
 
   /* Arcade shell: compact, thumb-friendly and independent of court palette. */
-  .sheet{overflow-y:auto;gap:20px}
+  .sheet{overflow-y:auto;gap:20px;touch-action:pan-y}
+  .sheet>*{flex-shrink:0}
   #menu{background:radial-gradient(ellipse at 80% 25%,#284651 0,transparent 55%),#101f2b;color:#f7f4ec;gap:16px;justify-content:safe center}
   .menu-top{width:100%;max-width:360px;display:flex;justify-content:space-between;align-items:center}
   .eyebrow{font-size:10px;font-weight:700;letter-spacing:.22em;color:#9fb5be}
