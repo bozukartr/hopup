@@ -94,3 +94,16 @@ biterse engelsiz ve salınımsız bir kuruluma düşer. Böylece **imkânsız tu
 npm i -D playwright && npx playwright install chromium
 node tests/game.test.mjs
 ```
+
+## Hopup arcade güncellemesi
+
+- Yeni Hopup ana menüsü: animasyonlu vektör saha, rekor kartları ve menüden ses kontrolü.
+- **Antrenman:** süre baskısı olmadan aynı saha ilerleyişini oyna; rekor ve koşu kayıtları etkilenmez. Duraklat menüsünden çıkılır.
+- Alt HUD sonraki sahanın kaç basket uzakta olduğunu gösterir. Sonuç ekranında atış, temiz basket ve isabet oranı bulunur.
+- Süre sıfıra indiğinde havadaki son atış tamamlanır. Basket olursa ek süreyle koşu devam eder; kaçarsa biter.
+- Topta hacimli ışık, kısa hareket izi ve zemin temasında ezilme tepkisi. Hareket azaltma tercihinde bu efektler kapalıdır.
+- İptal edilen dokunuş atış yapmaz. Çember ve panya temasında yalnızca yaklaşan normal hız yansıtılır; teğetsel hız korunur.
+- Nişan yayı gerçek fizik alt adımlarını, rüzgârı, hareketli potayı ve engelleri kullanır. İlk temasta veya basket düzleminde biter; duvar sekmesini gösterir.
+
+Bağımlılıksız fizik kontrolleri: `node tests/physics.test.mjs`.
+GitHub Actions gerçek Chromium üzerinde oyun regresyonlarını çalıştırır; mobil menü ve saha ekran görüntülerini artifact olarak saklar.

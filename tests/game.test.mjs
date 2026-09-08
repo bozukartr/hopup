@@ -334,7 +334,35 @@ ok('rekor kaydediliyor', best === 42, `rekor=${best}`);
 await pg.reload();
 await pg.waitForTimeout(600);
 ok('rekor yenilemeden sonra duruyor', (await dbg()).best === 42);
-ok('menüde rekor gösteriliyor', /Rekor/.test(await pg.textContent('#menuStats')));
+ok('menüde rekor gösteriliyor', /REKOR/.test(await pg.textContent('#menuStats')));
+
+group('yeni oyun deneyimi');
+ok('antrenman menüde erişilebilir', await pg.locator('#btnPractice').isVisible());
+await pg.click('#btnPractice');
+r = await run(`(()=>{const t=timeLeft,b=save.best,r=save.runs;for(let i=0;i<3600;i++)step();return {mode,state,t,timeLeft,best:save.best===b,runs:save.runs===r};})()`);
+ok('antrenman süresiz ve kayıtları değiştirmiyor', r.mode==='practice' && r.state==='play' && r.t===r.timeLeft && r.best && r.runs);
+r = await run(`(()=>{startRun();aimId=7;startAim(180,400);aim.y=530;cvs.dispatchEvent(new PointerEvent('pointercancel',{pointerId:7}));return phase==='aim' && aim===null && aimId===null && shots===0;})()`);
+ok('iptal edilen dokunuş atış yapmıyor', r);
+r = await run(`(()=>{startRun();hoop.amp=0;ball.x=(tipX()+innerX())/2;ball.y=hoopY()-30;ball.vx=0;ball.vy=3;phase='fly';timeLeft=.001;step();const alive=state==='play';for(let i=0;i<15&&!scored;i++)step();return alive&&scored&&timeLeft>0;})()`);
+ok('süre dolarken havadaki basket oyunu kurtarıyor', r);
+r = await run(`(()=>{startRun();ball.x=200;ball.y=300;ball.vx=5;ball.vy=3;circleHit(182,300,5,.62);return ball.vx===5 && ball.vy===3;})()`);
+ok('uzaklaşan top tekrar çembere çekilmiyor', r);
+r = await run(`(()=>{startRun();ball.x=200;ball.y=300;ball.vx=-5;ball.vy=3;circleHit(182,300,5,.62);return Math.abs(ball.vx-3.1)<.001 && ball.vy===3;})()`);
+ok('çember teğetsel hızı koruyor', r);
+r = await run(`(()=>{startRun();aimId=1;startAim(180,400);aim.y=520;const before=JSON.stringify({ball,bars,seed,parts:parts.length});drawAim(ball.x,ball.y);return before===JSON.stringify({ball,bars,seed,parts:parts.length});})()`);
+ok('yörünge çizimi fizik ve rastgelelik durumunu değiştirmiyor', r);
+await run('cancelAim();toMenu()');
+for(const [width,height] of [[320,568],[390,844],[844,390]]){
+  await pg.setViewportSize({width,height});
+  const visible=await pg.locator('#btnStart').evaluate(e=>{const r=e.getBoundingClientRect();return r.width>100&&r.left>=0&&r.right<=innerWidth;});
+  ok(`menü ${width}×${height} ekrana sığıyor`,visible);
+}
+await pg.setViewportSize({width:390,height:844});
+await pg.screenshot({path:join(here,'menu.png')});
+await pg.click('#btnStart');
+await pg.waitForTimeout(200);
+await pg.screenshot({path:join(here,'court.png')});
+await run('toMenu()');
 
 group('performans');
 await pg.click('#btnStart');
