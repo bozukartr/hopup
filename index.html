@@ -651,6 +651,7 @@ function newShot(){
 }
 
 function resetRun(){
+  elToast.replaceChildren();
   parts.length=0; rings.length=0; floats.length=0; nets.length=0;
   score=0; baskets=0; streak=0; bestStreakRun=0; timeLeft=START_TIME;
   shots=0; swishes=0; elCombo.classList.remove('on');

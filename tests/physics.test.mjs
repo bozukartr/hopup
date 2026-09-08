@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 const elements=new Map();
 const noop=()=>{};
 const paint=new Proxy({createLinearGradient:()=>({addColorStop:noop}),createRadialGradient:()=>({addColorStop:noop})},{get:(o,k)=>o[k]||noop,set:(o,k,v)=>(o[k]=v,true)});
-function element(){return {style:{setProperty:noop},dataset:{},classList:{add:noop,remove:noop,toggle:noop},children:[],setAttribute:noop,addEventListener:noop,getContext:()=>paint,appendChild(e){this.children.push(e);},remove:noop};}
+function element(){return {style:{setProperty:noop},dataset:{},classList:{add:noop,remove:noop,toggle:noop},children:[],setAttribute:noop,addEventListener:noop,getContext:()=>paint,appendChild(e){this.children.push(e);},remove:noop,replaceChildren(){this.children=[];}};}
 const document={getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},documentElement:element(),querySelector:()=>element(),createElement:element,addEventListener:noop};
 const world={document,innerWidth:390,innerHeight:844,devicePixelRatio:2,matchMedia:()=>({matches:false}),addEventListener:noop,requestAnimationFrame:noop,setTimeout:noop,clearTimeout:noop,navigator:{},localStorage:{getItem:()=>null,setItem:noop},performance,console};
 world.window=world;
